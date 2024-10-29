@@ -1,0 +1,36 @@
+<script setup lang="ts">
+import {
+    FwbA,
+    FwbTable,
+    FwbTableBody,
+    FwbTableCell,
+    FwbTableHead,
+    FwbTableHeadCell,
+    FwbTableRow,
+} from 'flowbite-vue'
+
+const props = defineProps<{
+    header: Array<string>
+    className?: string
+    body: Array<string>
+}>()
+</script>
+
+<template>
+    <fwb-table :class="className" hoverable striped>
+        <fwb-table-head>
+            <fwb-table-head-cell>No.</fwb-table-head-cell>
+            <fwb-table-head-cell v-for="(item, index) in header" :key="index">
+                {{ item }}
+            </fwb-table-head-cell>
+        </fwb-table-head>
+        <fwb-table-body class="text-center">
+            <fwb-table-row v-for="(bd, index) in body" :key="index">
+                <fwb-table-cell> {{ index + 1 }}</fwb-table-cell>
+                <fwb-table-cell v-for="(data, index) in bd" :key="index">
+                    {{ data }}
+                </fwb-table-cell>
+            </fwb-table-row>
+        </fwb-table-body>
+    </fwb-table>
+</template>

@@ -1,0 +1,26 @@
+:root{
+    --PRIMARY_BACKGROUND_COLOR: #E3A008;
+    --TEXT_LIGHT_COLOR: #F5F5F5;
+    --LINE_COLOR: #F4F4F4;
+    --MAX_WIDTH: 600px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: black;
+}
+
+main {
+    max-width: var(--MAX_WIDTH);
+    min-height: 100vh;
+    background-color: white;
+    border: 1px solid black;
+}
