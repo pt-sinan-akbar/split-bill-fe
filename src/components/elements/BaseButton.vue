@@ -5,25 +5,36 @@ import { ref, onMounted } from 'vue'
 
 const props = withDefaults(
     defineProps<{
-        msg: string
+        msg?: string
         type: 'button' | 'submit'
         color?: string
         className?: string
-        onClick?: () => void
     }>(),
     {
         color: 'yellow',
     },
 )
 
+const emit = defineEmits<{
+    (e: 'handleClick'): void
+}>()
+
+const handleClick = () => emit('handleClick')
+
 const className = ref<string>(`${props.className} font-medium`)
 </script>
 
 <template>
-    <fwb-button :class="className" :color="color" size="lg">
+    <fwb-button
+        :class="className"
+        :color="color"
+        size="lg"
+        @click="handleClick"
+    >
         <template #prefix>
             <slot name="icon"></slot>
         </template>
+        <slot></slot>
         <BaseParagraph className="text-white" :msg="msg" />
     </fwb-button>
 </template>

@@ -3,6 +3,7 @@
     --TEXT_LIGHT_COLOR: #F5F5F5;
     --LINE_COLOR: #F4F4F4;
     --MAX_WIDTH: 600px;
+    --PADDING_X: 20px;
 }
 
 * {
