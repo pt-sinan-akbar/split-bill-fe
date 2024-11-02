@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, useTemplateRef } from 'vue'
 import BaseButton from '../elements/BaseButton.vue'
 import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
+import CropperContainer from '../Croppper/Index.vue'
+import BaseModal from '../elements/BaseModal.vue'
 
 const video = ref<HTMLElement | null>(null)
 const canvas = ref<HTMLElement | null>(null)
 const ctx = ref<CanvasRenderingContext2D | null>(null)
 const img = ref<HTMLElement | null>(null)
 const hasCaptured = ref<boolean>(false)
+const isShowModal = ref<boolean>(false)
+const imgToCrop = ref<string>(null)
+const cropperRef = ref<HTMLElement>(null)
 
 const props = defineProps<{
     width: number
@@ -56,10 +61,28 @@ const draw = () => {
 }
 
 const handleCapture = () => {
-    console.log('test')
     const data = canvas.value.toDataURL('image/png')
     hasCaptured.value = true
     img.value.src = data
+}
+
+const handleImgChange = e => {
+    const files = event.target.files
+    isShowModal.value = true
+    if (files && files.length > 0) {
+        const file = files[0]
+        imgToCrop.value = URL.createObjectURL(file)
+    }
+}
+
+const handleCrop = async (): Promise<void> => {
+    try {
+        const imgBlob: Blob = await cropperRef.value.crop()
+        img.value.src = URL.createObjectURL(imgBlob)
+        isShowModal.value = false
+    } catch (error) {
+        console.log('Error cropping image:', error)
+    }
 }
 </script>
 
@@ -75,13 +98,20 @@ const handleCapture = () => {
             muted
             hidden
         ></video>
-        <canvas
-            v-show="!hasCaptured"
-            ref="canvas"
-            :width="width"
-            :height="height"
-            :style="{ padding: padding + 'px', border: 'none' }"
-        ></canvas>
+        <div class="relative w-full pb-[177.78%] my-5">
+            <div
+                class="absolute inset-0 rounded-lg overflow-hidden"
+            >
+                <canvas
+                    v-show="!hasCaptured"
+                    ref="canvas"
+                    :width="width"
+                    :height="height"
+                    class="w-full h-full object-cover border-0"
+                >
+                </canvas>
+            </div>
+        </div>
         <div v-show="hasCaptured" :style="{ padding: padding + 'px' }">
             <img src="#" alt="image-preview" ref="img" />
         </div>
@@ -106,11 +136,25 @@ const handleCapture = () => {
                 <input
                     id="files"
                     :style="{ visibility: 'hidden', display: 'none' }"
+                    @change="handleImgChange($event)"
                     type="file"
                 />
             </BaseButton>
         </div>
     </section>
+    <BaseModal v-model:isShowModal="isShowModal">
+        <template #body>
+            <CropperContainer
+                ref="cropperRef"
+                :img="imgToCrop"
+                :imgWidth="width"
+                :imgHeight="height"
+            />
+        </template>
+        <template #footer>
+            <BaseButton msg="Crop" @handleClick="handleCrop" />
+        </template>
+    </BaseModal>
 </template>
 
 <style>
