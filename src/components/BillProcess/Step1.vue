@@ -4,7 +4,7 @@ import BaseButton from '../elements/BaseButton.vue'
 import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import CropperContainer from '../Croppper/Index.vue'
-import BaseModal from '../elements/BaseModal.vue'
+import BaseModal from '../elements/Modal/BaseModal.vue'
 
 const video = ref<HTMLElement | null>(null)
 const canvas = ref<HTMLElement | null>(null)
@@ -14,11 +14,16 @@ const hasCaptured = ref<boolean>(false)
 const isShowModal = ref<boolean>(false)
 const imgToCrop = ref<string>(null)
 const cropperRef = ref<HTMLElement>(null)
+const imgClass = ref<type>('w-full h-full object-cover border-0 ')
 
 const props = defineProps<{
     width: number
     height: number
     padding: number
+}>()
+
+const emit = defineEmits<{
+    (e: 'next-step'): void
 }>()
 
 const constraints = ref<Object>({
@@ -80,6 +85,7 @@ const handleCrop = async (): Promise<void> => {
         const imgBlob: Blob = await cropperRef.value.crop()
         img.value.src = URL.createObjectURL(imgBlob)
         isShowModal.value = false
+        hasCaptured.value = true
     } catch (error) {
         console.log('Error cropping image:', error)
     }
@@ -98,22 +104,28 @@ const handleCrop = async (): Promise<void> => {
             muted
             hidden
         ></video>
-        <div class="relative w-full pb-[177.78%] my-5">
-            <div
-                class="absolute inset-0 rounded-lg overflow-hidden"
-            >
-                <canvas
-                    v-show="!hasCaptured"
-                    ref="canvas"
-                    :width="width"
-                    :height="height"
-                    class="w-full h-full object-cover border-0"
-                >
-                </canvas>
+        <div class="my-5">
+            <div class="relative w-full pb-[177.78%]">
+                <div class="absolute inset-0 rounded-lg overflow-hidden">
+                    <canvas
+                        v-show="!hasCaptured"
+                        ref="canvas"
+                        :width="width"
+                        :height="height"
+                        :class="imgClass"
+                    >
+                    </canvas>
+                    <img
+                        v-show="hasCaptured"
+                        src="#"
+                        :width="width"
+                        :height="height"
+                        alt="image-preview"
+                        ref="img"
+                        :class="imgClass"
+                    />
+                </div>
             </div>
-        </div>
-        <div v-show="hasCaptured" :style="{ padding: padding + 'px' }">
-            <img src="#" alt="image-preview" ref="img" />
         </div>
         <div>
             <BaseButton
@@ -122,15 +134,22 @@ const handleCrop = async (): Promise<void> => {
                 type="button"
                 @handleClick="handleCapture"
             />
-            <BaseButton
-                v-show="hasCaptured"
-                msg="Capture Again"
-                type="button"
-                @click="hasCaptured = false"
-            />
+            <div class="flex flex-col gap-y-3" v-show="hasCaptured">
+                <BaseButton
+                    msg="Capture Again"
+                    type="button"
+                    @click="hasCaptured = false"
+                />
+                <BaseParagraph msg="or" />
+                <BaseButton
+                    msg="Continue"
+                    type="button"
+                    @handleClick="emit('next-step')"
+                />
+            </div>
         </div>
-        <BaseParagraph msg="or" />
-        <div>
+        <div class="flex flex-col gap-y-3" v-show="!hasCaptured">
+            <BaseParagraph msg="or" />
             <BaseButton type="button">
                 <label for="files" class="btn">Upload from gallery</label>
                 <input
@@ -156,9 +175,3 @@ const handleCrop = async (): Promise<void> => {
         </template>
     </BaseModal>
 </template>
-
-<style>
-canvas {
-    border: 1px solid black;
-}
-</style>

@@ -21,7 +21,7 @@ const emit = defineEmits<{
 
 const handleClick = () => emit('handleClick')
 
-const className = ref<string>(`${props.className} font-medium`)
+const className = ref<string>(`${props.className} inline-block font-medium`)
 </script>
 
 <template>
