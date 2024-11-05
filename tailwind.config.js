@@ -12,6 +12,7 @@ export default {
         'primary-background': 'var(--PRIMARY_BACKGROUND_COLOR)',
         'light-text-color': 'var(--TEXT_LIGHT_COLOR)',
         'line-color': 'var(--LINE_COLOR)',
+        'primary-color': '#FFC31B',
       }
     },
   },

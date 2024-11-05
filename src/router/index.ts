@@ -14,6 +14,11 @@ const router = createRouter({
       name: 'add-split-bill',
       component: () => import('../components/BillProcess/Index.vue'),
     },
+    {
+      path: '/s/:id',
+      name: 'share',
+      component: () => import('../views/ShareView.vue'),
+    }
   ],
 })
 
