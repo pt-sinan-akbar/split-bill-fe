@@ -8,7 +8,6 @@ const props = defineProps<{
   msg: string
 }>()
 
-const className = ref<string>(props.className)
 </script>
 
 <template>
