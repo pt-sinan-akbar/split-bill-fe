@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  FwbA,
   FwbTable,
   FwbTableBody,
   FwbTableCell,
@@ -20,21 +19,21 @@ const props = withDefaults(
     withNumber: true,
   },
 )
+
 </script>
 
 <template>
-  <fwb-table :class="className" hoverable striped>
+  <fwb-table class="shadow-none text-start">
     <fwb-table-head class="w-full">
       <fwb-table-head-cell v-if="withNumber">No.</fwb-table-head-cell>
       <fwb-table-head-cell v-for="(item, index) in header" :key="index">
         {{ item }}
       </fwb-table-head-cell>
     </fwb-table-head>
-    <fwb-table-body class="text-center">
+    <fwb-table-body>
       <fwb-table-row v-for="(bd, index) in body" :key="index">
-        <fwb-table-cell v-if="withNumber">
-          {{ index + 1 }}</fwb-table-cell>
-        <fwb-table-cell v-for="(data, index) in bd" :key="index">
+        <fwb-table-cell v-if="withNumber"> {{ index + 1 }}</fwb-table-cell>
+        <fwb-table-cell v-for="(data, index) in bd" :key="index" contenteditable="true" class="px-0">
           {{ data }}
         </fwb-table-cell>
       </fwb-table-row>

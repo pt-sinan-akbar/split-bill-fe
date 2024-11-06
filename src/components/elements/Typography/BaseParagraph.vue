@@ -7,9 +7,9 @@ const props = defineProps<{
   className?: string
 }>()
 
-const className = ref<string>(`${props.className} m-0`)
+const initClass = ref<string>(`${props.className} m-0`)
 </script>
 
 <template>
-  <fwb-p :class="className" > {{ msg }}</fwb-p>
+  <fwb-p :class="initClass"> {{ msg }}</fwb-p>
 </template>
