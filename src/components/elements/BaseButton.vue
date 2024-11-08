@@ -10,11 +10,19 @@ const props = withDefaults(
     type?: 'button' | 'submit'
     color?: ButtonVariant
     className?: string
+    outline?: boolean
+    pill?: boolean
+    square?: boolean
+    size?: 'xs' | 'sm' | 'md' | 'lg'
   }>(),
   {
     type: 'button',
     msg: '',
+    pill: false,
+    square: false,
     color: 'yellow',
+    outline: false,
+    size: 'md',
   },
 )
 
@@ -23,16 +31,16 @@ const emit = defineEmits<{
 }>()
 
 const handleClick = () => emit('handleClick')
-
-const className = ref<string>(`${props.className} inline-block font-medium`)
+const className = ref<string>(
+  `inline-block font-medium w-full ${props.outline ? 'text-black hover:text-white' : 'text-white hover:text-white'} ${props.className}`,
+)
 </script>
 
 <template>
-  <fwb-button :class="className" :color="color" size="lg" @click="handleClick">
-    <template #prefix>
-      <slot name="icon"></slot>
-    </template>
+  <fwb-button :size="size" :class="className" :color="color" @click="handleClick" :outline="outline" :pill="pill"
+    :square="square">
+    <slot name="icon"></slot>
     <slot></slot>
-    <BaseParagraph className="text-white" :msg="msg" />
+    <BaseParagraph v-if="msg" className="text-inherit font-medium" :msg="msg" />
   </fwb-button>
 </template>

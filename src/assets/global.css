@@ -27,6 +27,6 @@ main {
     overflow: hidden;
 }
 
-td:focus{
+p, td:focus{
     outline: none;
 }
