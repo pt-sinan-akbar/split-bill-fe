@@ -19,7 +19,6 @@ const props = withDefaults(
     withNumber: true,
   },
 )
-
 </script>
 
 <template>
@@ -31,9 +30,14 @@ const props = withDefaults(
       </fwb-table-head-cell>
     </fwb-table-head>
     <fwb-table-body>
-      <fwb-table-row v-for="(bd, index) in body" :key="index">
-        <fwb-table-cell v-if="withNumber"> {{ index + 1 }}</fwb-table-cell>
-        <fwb-table-cell v-for="(data, index) in bd" :key="index" contenteditable="true" class="px-0">
+      <fwb-table-row v-for="(bd, rowIndex) in body" :key="rowIndex">
+        <fwb-table-cell v-if="withNumber">
+          {{ rowIndex + 1 }}</fwb-table-cell>
+        <fwb-table-cell
+          v-for="(data, colIndex) in bd" :key="colIndex" :class="colIndex !== 0 && colIndex !== body.length - 1
+            ? 'text-center'
+            : ''
+          " contenteditable="true" :style="{ 'padding-left': '0px', 'padding-right': '0px' }">
           {{ data }}
         </fwb-table-cell>
       </fwb-table-row>

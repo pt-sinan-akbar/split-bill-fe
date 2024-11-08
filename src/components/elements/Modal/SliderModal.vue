@@ -29,7 +29,6 @@ onMounted(() => {
   const bodyHeight = body.value.offsetHeight
   const footerHeight = footer.value.offsetHeight
   const wrapperHeight = headerHeight + bodyHeight + footerHeight
-  console.log('cotnainerHeight', wrapperHeight)
   panel.value.style.height = `${wrapperHeight * 2 + 60}px`
 })
 

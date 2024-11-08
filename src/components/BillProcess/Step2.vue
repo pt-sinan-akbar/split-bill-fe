@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import BaseButton from '../elements/BaseButton.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
@@ -20,7 +20,9 @@ interface AssignTo {
 
 const billTitle = ref<string>('Bill Title')
 const header = ref<Array<string>>(['Bill Name', 'Quantity', 'Price'])
-const assignToContainer = ref<HTMLElement | null>(null)
+const userContainerList = ref<Array<any>>([])
+const touchStartX = ref<number>(0)
+const touchEndX = ref<number>(0)
 
 const body = ref<Array<Array<string>>>([
   ['Pizza', '3', '15000'],
@@ -53,6 +55,30 @@ const addNewUser = (): void => {
     image: 'https://randomuser.me/api/portraits/thumb/women/96.jpg',
   })
 }
+
+const checkDirection = (index: number): void => {
+  const isSwipeLeft = touchEndX.value < touchStartX.value
+  if (isSwipeLeft) {
+    const removeUser = (index: number): void => {
+      assignTo.value = assignTo.value.filter(
+        user => user.id !== index + 1,
+      )
+    }
+    removeUser(index)
+  }
+}
+
+onMounted(() => {
+  userContainerList.value.forEach((el: HTMLElement, index: number) => {
+    el.addEventListener('touchstart', (e: TouchEvent) => {
+      touchStartX.value = e.changedTouches[0].screenX
+    })
+    el.addEventListener('touchend', (e: TouchEvent) => {
+      touchEndX.value = e.changedTouches[0].screenX
+      checkDirection(index)
+    })
+  })
+})
 
 const toogleShowModal = () => (showModal.value = !showModal.value)
 </script>
@@ -98,7 +124,8 @@ const toogleShowModal = () => (showModal.value = !showModal.value)
       </template>
       <template v-slot:body>
         <div class="w-full flex gap-y-5 flex-col justify-start">
-          <div class="flex gap-x-5 border-b-2 pb-3" v-for="item in assignTo" :key="item.id">
+          <div class="flex gap-x-5 border-b-2 pb-3" v-for="(item, index) in assignTo" :key="item.id"
+            :ref="el => (userContainerList[index] = el)">
             <img :src="item.image" alt="profile-preview" width="30" height="30" class="rounded-full block" />
             <BaseParagraph :contenteditable="true" :msg="item.name" />
           </div>

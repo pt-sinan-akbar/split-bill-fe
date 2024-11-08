@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { FwbButton, FwbModal } from 'flowbite-vue'
+import {  watch } from 'vue'
+import { FwbModal } from 'flowbite-vue'
 
 const props = withDefaults(
     defineProps<{
@@ -12,7 +12,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-    'update:isShowModal': (value: boolean) => void
+  (e: 'update:isShowModal', value: boolean) : boolean
 }>()
 
 watch(
@@ -22,7 +22,7 @@ watch(
     },
 )
 
-const closeModal = (): void => emit('update:isShowModal', false)
+const closeModal = (): boolean => emit('update:isShowModal', false)
 </script>
 
 <template>
