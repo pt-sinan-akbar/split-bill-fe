@@ -3,7 +3,9 @@ import { ref, onMounted } from 'vue'
 import Basesteps from '../elements/BaseSteps.vue'
 import Step1 from './Step1.vue'
 import Step2 from './Step2.vue'
-import Step3 from './Step3.vue';
+import Step3 from './Step3.vue'
+import Step4 from './Step4.vue'
+import { watch } from 'vue'
 
 const section = ref<HTMLElement | null>(null)
 const width = ref<number>(100)
@@ -19,6 +21,11 @@ onMounted(() => {
 
 const increaseStep = (): number => currStep.value++
 const decreseStep = (): number => currStep.value--
+const resetStep = (): number => currStep.value = 1
+
+watch(currStep, newVal => {
+  console.log('value: ', newVal)
+})
 </script>
 
 <template>
@@ -27,6 +34,7 @@ const decreseStep = (): number => currStep.value--
     <Step1 v-if="currStep === 1" :width="width" :height="height" :padding="padding" @next-step="increaseStep" />
     <Step2 v-if="currStep === 2" @prev-step="decreseStep" @next-step="increaseStep" />
     <Step3 v-if="currStep === 3" @prev-step="decreseStep" @next-step="increaseStep" />
+    <Step4 v-if="currStep === 4" @prev-step="resetStep" @next-step="increaseStep" />
   </section>
 </template>
 

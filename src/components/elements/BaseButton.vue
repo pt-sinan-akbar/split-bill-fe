@@ -41,6 +41,7 @@ const className = ref<string>(
     :square="square">
     <slot name="icon"></slot>
     <slot></slot>
+    <!-- TODO: add ref to get the paragraph text -->
     <BaseParagraph v-if="msg" className="text-inherit font-medium" :msg="msg" />
   </fwb-button>
 </template>

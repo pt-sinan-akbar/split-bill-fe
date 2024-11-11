@@ -25,6 +25,7 @@ const emit = defineEmits<{
 const handleSubmit = (): void => {
   // TODO: validate data input
   console.log('submitted data: ', billOwnerData.value)
+  emit("next-step")
 }
 </script>
 
