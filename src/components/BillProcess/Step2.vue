@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 import BaseButton from '../elements/BaseButton.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
@@ -29,6 +29,7 @@ const body = ref<Array<Array<string>>>([
   ['Pizza', '3', '15000'],
   ['Pizza', '3', '15000'],
 ])
+
 const showModal = ref<boolean>(false)
 const assignTo = ref<Array<AssignTo>>([
   {
@@ -48,35 +49,58 @@ const assignTo = ref<Array<AssignTo>>([
   },
 ])
 
-const addNewUser = (): void => {
+const addNewUser = async (): Promise<void> => {
   assignTo.value.push({
     id: assignTo.value.length + 1,
     name: 'New User',
     image: 'https://randomuser.me/api/portraits/thumb/women/96.jpg',
   })
+  await nextTick(() => {
+    const lastIndex: number = userContainerList.value.length - 1
+    const lastElement: HTMLElement = userContainerList.value[lastIndex]
+    addSwipeEvent(lastElement, lastIndex)
+  })
 }
 
-const checkDirection = (index: number): void => {
+// TODO: still bug
+const checkDirection = async (index: number): Promise<void> => {
   const isSwipeLeft = touchEndX.value < touchStartX.value
   if (isSwipeLeft) {
-    const removeUser = (index: number): void => {
-      assignTo.value = assignTo.value.filter(
-        user => user.id !== index + 1,
-      )
-    }
+    const removeUser = (index: number): AssignTo[] =>
+      assignTo.value.splice(index, 1)
     removeUser(index)
+
+    await nextTick(() => {
+      const removeElement = (index: number) =>
+        userContainerList.value.splice(index, 1)
+      removeElement(index)
+
+      userContainerList.value.forEach(
+        (el: HTMLElement, elIdx: number) => {
+          const reAssignElement = (el: HTMLElement): void =>
+            el.replaceWith(el.cloneNode(true))
+
+          reAssignElement(el)
+          addSwipeEvent(el, elIdx)
+        },
+      )
+    })
   }
+}
+
+const addSwipeEvent = (el: HTMLElement, index: number) => {
+  el.addEventListener('touchstart', (e: TouchEvent) => {
+    touchStartX.value = e.changedTouches[0].screenX
+  })
+  el.addEventListener('touchend', (e: TouchEvent) => {
+    touchEndX.value = e.changedTouches[0].screenX
+    checkDirection(index)
+  })
 }
 
 onMounted(() => {
   userContainerList.value.forEach((el: HTMLElement, index: number) => {
-    el.addEventListener('touchstart', (e: TouchEvent) => {
-      touchStartX.value = e.changedTouches[0].screenX
-    })
-    el.addEventListener('touchend', (e: TouchEvent) => {
-      touchEndX.value = e.changedTouches[0].screenX
-      checkDirection(index)
-    })
+    addSwipeEvent(el, index)
   })
 })
 
