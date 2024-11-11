@@ -110,7 +110,8 @@ const toogleShowModal = () => (showModal.value = !showModal.value)
     </div>
     <div class="w-full flex gap-x-3">
       <PrevButton @handleClick="emit('prev-step')" />
-      <BaseButton msg="Assign Items" type="button" @handleClick="toogleShowModal" />
+      <!-- <BaseButton msg="Continue" type="button" @handleClick="toogleShowModal" /> -->
+      <BaseButton msg="Continue" type="button" @handleClick="emit('next-step')" />
     </div>
     <SliderModal :showModal="showModal">
       <template v-slot:header>

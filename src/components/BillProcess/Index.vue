@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import Basesteps from '../elements/BaseSteps.vue'
 import Step1 from './Step1.vue'
 import Step2 from './Step2.vue'
+import Step3 from './Step3.vue';
 
 const section = ref<HTMLElement | null>(null)
 const width = ref<number>(100)
@@ -25,6 +26,7 @@ const decreseStep = (): number => currStep.value--
     <Basesteps />
     <Step1 v-if="currStep === 1" :width="width" :height="height" :padding="padding" @next-step="increaseStep" />
     <Step2 v-if="currStep === 2" @prev-step="decreseStep" @next-step="increaseStep" />
+    <Step3 v-if="currStep === 3" @prev-step="decreseStep" @next-step="increaseStep" />
   </section>
 </template>
 
