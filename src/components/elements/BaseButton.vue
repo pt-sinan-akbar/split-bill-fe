@@ -15,6 +15,7 @@ const props = withDefaults(
     square?: boolean
     size?: 'xs' | 'sm' | 'md' | 'lg'
     msgCopy?: string
+    successCopy?: string
   }>(),
   {
     type: 'button',
@@ -45,11 +46,14 @@ const initBtnContentClass = ref<string>(
 <template>
   <fwb-button :size="size" :class="initBtnClass" :color="color" @click="handleClick" :outline="outline" :pill="pill"
     :square="square">
-    <div v-if="$slots.icon" class="flex gap-x-5 justify-start items-center">
+    <div v-if="$slots.icon" class="flex gap-x-3 justify-start items-center">
       <slot name="icon"></slot>
-      <BaseParagraph v-if="msg" :className="initBtnContentClass" :msg="msg" :msg-copy="msgCopy" />
+      <slot></slot>
+      <BaseParagraph v-if="msg" :className="initBtnContentClass" :msg="msg" :msg-copy="msgCopy"
+        :success-copy="successCopy" />
     </div>
     <div v-else>
+      <slot></slot>
       <BaseParagraph v-if="msg" :className="initBtnContentClass" :msg="msg" :msg-copy="msgCopy" />
     </div>
   </fwb-button>

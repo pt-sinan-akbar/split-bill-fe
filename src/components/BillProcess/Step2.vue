@@ -5,7 +5,6 @@ import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
 import BaseTable from '../elements/BaseTable.vue'
 import SliderModal from '../elements/Modal/SliderModal.vue'
-import PrevButton from '../elements/Navigation/PrevButton.vue'
 import PrevButton from '../elements/Button/Variants/PrevButton.vue'
 
 const emit = defineEmits<{

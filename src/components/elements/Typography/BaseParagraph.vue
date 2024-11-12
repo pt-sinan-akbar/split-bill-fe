@@ -8,24 +8,43 @@ const props = withDefaults(
     className?: string
     contenteditable?: boolean
     msgCopy?: string
+    successCopy?: string
   }>(),
   {
     contenteditable: false,
-    msgCopy: 'Coppied!'
+    msgCopy: 'Copy to clipboard!',
+    successCopy: 'Coppied!',
   },
 )
 
 const initClass = ref<string>(`${props.className} m-0`)
+const clipboardMsg = ref<HTMLElement | null>(null)
+
 const emit = defineEmits<{
   (e: 'handleClick'): void
 }>()
+
+const handleClick = (): void => {
+  if (props.className?.includes('tooltip')) {
+    if (clipboardMsg.value) {
+      clipboardMsg.value.textContent = props.successCopy
+    }
+  }
+  emit('handleClick')
+}
+
+const resetClipboardMsg = (): void => {
+  if (props.className?.includes('tooltip') && clipboardMsg.value) {
+    clipboardMsg.value.textContent = props.msgCopy
+  }
+}
 </script>
 
 <template>
-  <fwb-p :class="initClass" :contenteditable="contenteditable" @click="emit('handleClick')">
+  <fwb-p :class="initClass" :contenteditable="contenteditable" @click="handleClick" @mouseleave="resetClipboardMsg">
     {{ msg }}
-    <span v-if="className?.includes('tooltip')" class="tooltiptext">
+    <span v-if="className?.includes('tooltip')" class="tooltiptext" ref="clipboardMsg">
       {{ msgCopy }}
     </span>
-    </fwb-p>
+  </fwb-p>
 </template>
