@@ -3,6 +3,7 @@
 import PriceParagraph from '@/components/elements/Typography/PriceParagraph.vue'
 import BaseParagraph from '@/components/elements/Typography/BaseParagraph.vue'
 import { FwbAccordion, FwbAccordionContent, FwbAccordionHeader, FwbAccordionPanel } from 'flowbite-vue'
+import InitialAvatar from '@/components/elements/InitialAvatar.vue'
 
 const props = defineProps<{
   member: {
@@ -23,8 +24,8 @@ const props = defineProps<{
   <div class="flex flex-col gap-3">
     <div class="flex justify-between items-center w-full">
       <div class="flex gap-3 items-center">
-        <div class="rounded-full bg-gray-100 w-9 h-9"/>
-        <BaseParagraph :msg="member.name" className="text-lg"/>
+        <InitialAvatar :name="member.name"/>
+        <BaseParagraph :msg="member.name" className="text-lg line-clamp-1 !mr-4"/>
       </div>
       <PriceParagraph :price="member.priceOwe" className="text-xl"/>
     </div>
