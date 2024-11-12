@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import BaseButton from '../BaseButton.vue'
+import BaseButton from '../../BaseButton.vue';
 const emit = defineEmits<{
   (e: 'handleClick'): void
 }>()

@@ -7,19 +7,25 @@ const props = withDefaults(
     msg: string
     className?: string
     contenteditable?: boolean
+    msgCopy?: string
   }>(),
   {
     contenteditable: false,
+    msgCopy: 'Coppied!'
   },
 )
 
 const initClass = ref<string>(`${props.className} m-0`)
 const emit = defineEmits<{
-  (e: 'handleClick' ): void
+  (e: 'handleClick'): void
 }>()
 </script>
 
 <template>
   <fwb-p :class="initClass" :contenteditable="contenteditable" @click="emit('handleClick')">
-    {{ msg }}</fwb-p>
+    {{ msg }}
+    <span v-if="className?.includes('tooltip')" class="tooltiptext">
+      {{ msgCopy }}
+    </span>
+    </fwb-p>
 </template>

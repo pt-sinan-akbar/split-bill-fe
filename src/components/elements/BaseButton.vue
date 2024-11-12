@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseParagraph from './Typography/BaseParagraph.vue'
 import { FwbButton } from 'flowbite-vue'
-import { ButtonVariant } from 'flowbite-vue/dist/components/FwbButton/types'
+import type { ButtonVariant } from 'flowbite-vue/components/FwbButton/types.js'
 import { ref } from 'vue'
 
 const props = withDefaults(
@@ -14,6 +14,7 @@ const props = withDefaults(
     pill?: boolean
     square?: boolean
     size?: 'xs' | 'sm' | 'md' | 'lg'
+    msgCopy?: string
   }>(),
   {
     type: 'button',
@@ -28,20 +29,69 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'handleClick'): void
+  (e: 'handleClick'): void
+  (e: 'refContent', el: HTMLElement | null): void
 }>()
 
 const handleClick = () => emit('handleClick')
-const className = ref<string>(
+const initBtnClass = ref<string>(
   `inline-block font-medium w-full ${props.outline ? 'text-black hover:text-white' : 'text-white hover:text-white'} ${props.className}`,
+)
+const initBtnContentClass = ref<string>(
+  `text-inherit font-medium ${props.className?.includes('tooltip') ? 'tooltip' : ''}`,
 )
 </script>
 
 <template>
-  <fwb-button :size="size" :class="className" :color="color" @click="handleClick" :outline="outline" :pill="pill"
+  <fwb-button :size="size" :class="initBtnClass" :color="color" @click="handleClick" :outline="outline" :pill="pill"
     :square="square">
-    <slot name="icon"></slot>
-    <slot></slot>
-    <!-- TODO: add ref to get the paragraph text -->
-    <BaseParagraph v-if="msg" className="text-inherit font-medium" :msg="msg" />
+    <div v-if="$slots.icon" class="flex gap-x-5 justify-start items-center">
+      <slot name="icon"></slot>
+      <BaseParagraph v-if="msg" :className="initBtnContentClass" :msg="msg" :msg-copy="msgCopy" />
+    </div>
+    <div v-else>
+      <BaseParagraph v-if="msg" :className="initBtnContentClass" :msg="msg" :msg-copy="msgCopy" />
+    </div>
   </fwb-button>
 </template>
+
+<style>
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 140px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 150%;
+  left: 50%;
+  margin-left: -75px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip .tooltiptext::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  margin-bottom: 16px;
+  opacity: 1;
+}
+</style>
