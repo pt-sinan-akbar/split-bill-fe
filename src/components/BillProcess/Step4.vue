@@ -33,6 +33,8 @@ const copyUrl = (): void => {
         msg="Bill splitted! now share this link to your friends so they can see how much they owe you" />
     </section>
     <UrlButton :msg="urlMsg" @handle-click="copyUrl" />
-    <BaseButton msg="Back to Home" type="button" @handle-click="emit('prev-step')" />
+    <RouterLink :to="{name: 'home'}">
+      <BaseButton msg="Back to Home" type="button" />
+    </RouterLink>
   </div>
 </template>

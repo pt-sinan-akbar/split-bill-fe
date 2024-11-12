@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import App from '../App.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -7,10 +6,10 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: App,
+      component: () => import('../views/HomeView.vue'),
     },
     {
-      path: '/split-bill/add',
+      path: '/start',
       name: 'add-split-bill',
       component: () => import('../components/BillProcess/Index.vue'),
     },
