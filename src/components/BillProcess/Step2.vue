@@ -84,7 +84,7 @@ const toogleShowModal = () => (showModal.value = !showModal.value)
 </script>
 
 <template>
-  <div class="h-full flex flex-col justify-between">
+  <div class="h-screen flex flex-col justify-between">
     <div class="flex flex-col gap-y-10">
       <section class="flex flex-col gap-y-3">
         <BaseTitle className="text-center" tag="h5" msg="List of Items" />

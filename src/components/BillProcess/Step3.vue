@@ -4,6 +4,7 @@ import BaseInput from '../elements/BaseInput.vue'
 import BaseButton from '../elements/BaseButton.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
+import PrevButton from '../elements/Button/Variants/PrevButton.vue'
 
 interface FormData {
   name: string
@@ -25,12 +26,12 @@ const emit = defineEmits<{
 const handleSubmit = (): void => {
   // TODO: validate data input
   console.log('submitted data: ', billOwnerData.value)
-  emit("next-step")
+  emit('next-step')
 }
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit" class="h-full flex flex-col justify-between">
+  <form @submit.prevent="handleSubmit" class="h-screen flex flex-col justify-between">
     <section class="flex flex-col gap-y-3">
       <BaseTitle className="text-center" tag="h5" msg="Insert Your Details" />
       <BaseParagraph className="text-center" msg="To let your friends knows where to pay" />
@@ -40,6 +41,9 @@ const handleSubmit = (): void => {
       <BaseInput v-model:model-value="billOwnerData.contact" placeholder="Contact" label="Contact" type="number" />
       <BaseInput v-model:model-value="billOwnerData.paymentInfo" placeholder="Pay to" label="Pay To" type="text" />
     </div>
-    <BaseButton msg="Continue" type="submit" />
+    <div class="w-full flex gap-x-3">
+      <PrevButton @handleClick="emit('prev-step')" />
+      <BaseButton msg="Continue" type="submit" />
+    </div>
   </form>
 </template>
