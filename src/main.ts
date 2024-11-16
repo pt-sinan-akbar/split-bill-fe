@@ -15,7 +15,7 @@ app.use(router)
 app.mount('#app')
 
 // TODO:
-// 1. Create a dynamic progress bar
+// 1. Create a dynamic progress bar [Done]
 // 2. Fix logic to swipe delete event
 // 3. Add modal section to edit item bill
 // 4. Increase camera resolution

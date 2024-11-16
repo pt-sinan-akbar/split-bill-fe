@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {  watch } from 'vue'
+import { watch } from 'vue'
 import { FwbModal } from 'flowbite-vue'
 
 const props = withDefaults(
@@ -12,7 +12,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  (e: 'update:isShowModal', value: boolean) : boolean
+    (e: 'update:isShowModal', value: boolean): boolean
 }>()
 
 watch(
@@ -26,7 +26,7 @@ const closeModal = (): boolean => emit('update:isShowModal', false)
 </script>
 
 <template>
-    <fwb-modal v-if="isShowModal" @close="closeModal">
+    <fwb-modal v-if="isShowModal" @close="closeModal" size="sm">
         <template #header>
             <slot name="header"></slot>
         </template>

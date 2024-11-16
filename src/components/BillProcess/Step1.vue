@@ -35,7 +35,11 @@ const constraints = ref<Object>({
 
 onMounted(async () => {
   if (video.value && canvas.value) {
-    ctx.value = canvas.value.getContext('2d')
+    ctx.value = canvas.value.getContext('2d', {
+      alpha: false,
+      desynchronized: true,
+      willReadFrequently: false,
+    })
     await initCamera()
   }
 })
@@ -47,8 +51,15 @@ const initCamera = async () => {
       constraints.value,
     )
     video.value.srcObject = stream
-    video.value.play()
-    requestAnimationFrame(draw)
+
+    video.value.onloadedmetadata = () => {
+      if (canvas.value && video.value) {
+        canvas.value.width = video.value.videoWidth
+        canvas.value.height = video.value.videoHeight
+        video.value.play()
+      }
+      requestAnimationFrame(draw)
+    }
   } catch (err) {
     console.error('Camera error:', err)
   }
@@ -56,6 +67,8 @@ const initCamera = async () => {
 
 const draw = () => {
   if (!ctx.value || !video.value || !canvas.value) return
+  ctx.value.imageSmoothingEnabled = true
+  ctx.value.imageSmoothingQuality = 'high'
   ctx.value.drawImage(
     video.value,
     0,
@@ -131,9 +144,9 @@ const handleCrop = async (): Promise<void> => {
       </div>
     </div>
   </section>
-  <BaseModal v-model:isShowModal="isShowModal">
+  <BaseModal v-model:isShowModal="isShowModal" v-if="video">
     <template #body>
-      <CropperContainer ref="cropperRef" :img="imgToCrop" :imgWidth="width" :imgHeight="height" />
+      <CropperContainer ref="cropperRef" :img="imgToCrop" :imgWidth="video.videoWidth" :imgHeight="video.videoHeight" />
     </template>
     <template #footer>
       <BaseButton msg="Crop" @handleClick="handleCrop" />

@@ -16,6 +16,8 @@ const imgRatio = ref<object>({
 const imgSize = ref<object>({
   width: props.imgWidth,
   height: props.imgHeight,
+  imageSmoothingEnabled: true,
+  imageSmoothingQuality: 'high'
 })
 
 const crop = async (): Promise<Blob> => {
@@ -42,5 +44,5 @@ defineExpose({
 </script>
 
 <template>
-  <cropper ref="cropperInstance" :src="img" :stencil-props="imgRatio" :canvas="imgSize" />
+  <cropper ref="cropperInstance" :src="img" :stencil-props="imgRatio" :canvas="imgSize"  />
 </template>
