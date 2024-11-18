@@ -6,6 +6,8 @@ import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
 import BaseTable from '../elements/BaseTable.vue'
 import SliderModal from '../elements/Modal/SliderModal.vue'
 import PrevButton from '../elements/Button/Variants/PrevButton.vue'
+import InitialAvatar from '../elements/InitialAvatar.vue'
+import BaseInput from '../elements/BaseInput.vue'
 
 const emit = defineEmits<{
   (e: 'next-step'): void
@@ -15,7 +17,13 @@ const emit = defineEmits<{
 interface AssignTo {
   id: number
   name: string
-  image: string
+  image?: string
+}
+
+interface ItemBill {
+  name: string
+  Quantity: number
+  price: number
 }
 
 const billTitle = ref<string>('Bill Title')
@@ -23,13 +31,22 @@ const header = ref<Array<string>>(['Bill Name', 'Quantity', 'Price'])
 const userContainerList = ref<Array<any>>([])
 const touchStartX = ref<number>(0)
 const touchEndX = ref<number>(0)
+const currEditIndexData = ref<number>(0)
 
+const itemBillDetail = ref<ItemBill>({
+  name: '',
+  Quantity: 0,
+  price: 0,
+})
+
+// TODO: Refactor the dummy data to use the interface
 const body = ref<Array<Array<string>>>([
   ['Pizza', '3', '15000'],
-  ['Pizza', '3', '15000'],
-  ['Pizza', '3', '15000'],
+  ['Burger', '3', '15000'],
+  ['idk', '3', '15000'],
 ])
-const showModal = ref<boolean>(false)
+const showAssignModal = ref<boolean>(false)
+const showEditItemModal = ref<boolean>(false)
 const assignTo = ref<Array<AssignTo>>([
   {
     id: 1,
@@ -39,12 +56,11 @@ const assignTo = ref<Array<AssignTo>>([
   {
     id: 2,
     name: 'Jane Doe',
-    image: 'https://randomuser.me/api/portraits/thumb/women/82.jpg',
+    image: 'https://randomuser.me/api/portraits/thumb/men/87.jpg',
   },
   {
     id: 3,
     name: 'John Doe',
-    image: 'https://randomuser.me/api/portraits/thumb/women/96.jpg',
   },
 ])
 
@@ -80,7 +96,29 @@ onMounted(() => {
   })
 })
 
-const toogleShowModal = () => (showModal.value = !showModal.value)
+const handleEditItem = (data: Array<string>, indexData: number): void => {
+  itemBillDetail.value = {
+    name: data[0],
+    Quantity: parseInt(data[1]),
+    price: parseInt(data[2]),
+  }
+  currEditIndexData.value = indexData;
+  toogleShowEditItemModal()
+}
+
+const editItemBill = (): void => {
+  const { name, Quantity, price }  = itemBillDetail.value
+  body.value[currEditIndexData.value] =  [name, Quantity.toString(), price.toString()]
+  console.log("item detail: ", itemBillDetail.value)
+  toogleShowEditItemModal()
+}
+
+const toogleShowModal = () => (showAssignModal.value = !showAssignModal.value)
+const handleHold = (data: string): void => {
+  toogleShowModal()
+}
+const toogleShowEditItemModal = () =>
+  (showEditItemModal.value = !showEditItemModal.value)
 </script>
 
 <template>
@@ -93,7 +131,8 @@ const toogleShowModal = () => (showModal.value = !showModal.value)
       </section>
       <section class="flex flex-col gap-y-5">
         <BaseTitle className="text-center" tag="h6" :msg="billTitle" />
-        <BaseTable :withNumber="false" :body="body" />
+        <BaseTable :withNumber="false" :body="body" @handle-hold="handleHold" :has-edit-action="true"
+          @handle-edit="handleEditItem" />
         <div class="flex justify-between mt-5">
           <BaseParagraph msg="Tax" />
           <BaseParagraph :contenteditable="true" msg="11000" />
@@ -110,10 +149,33 @@ const toogleShowModal = () => (showModal.value = !showModal.value)
     </div>
     <div class="w-full flex gap-x-3">
       <PrevButton @handleClick="emit('prev-step')" />
-      <!-- <BaseButton msg="Continue" type="button" @handleClick="toogleShowModal" /> -->
-      <BaseButton msg="Continue" type="button" @handleClick="emit('next-step')" />
+      <BaseButton msg="Continue" type="button" @handleClick="toogleShowModal" />
+      <!--  <BaseButton msg="Continue" type="button" @handleClick="emit('next-step')" /> -->
     </div>
-    <SliderModal :showModal="showModal">
+    <!-- Edit Item -->
+    <SliderModal :showModal="showEditItemModal">
+      <template v-slot:header>
+        <BaseTitle tag="h5" msg="Edit Item" class="w-full text-start" />
+      </template>
+      <template v-slot:body>
+        <div class="flex flex-col gap-y-5">
+          <BaseInput v-model:model-value="itemBillDetail.name" placeholder="Item Name" label="Item Name" type="text" />
+          <div class="flex justify-between gap-x-5">
+            <BaseInput v-model:model-value="itemBillDetail.price" placeholder="Price" label="Price" type="number" />
+            <BaseInput v-model:model-value="itemBillDetail.Quantity" placeholder="Quantity" label="Quantity"
+              type="number" />
+          </div>
+        </div>
+      </template>
+      <template v-slot:fotoer>
+        <div class="flex justify-between gap-x-3 mt-5 sticky top-0">
+          <PrevButton @handleClick="toogleShowEditItemModal" />
+          <BaseButton msg="Done" type="button" @handle-click="editItemBill"/>
+        </div>
+      </template>
+    </SliderModal>
+    <!-- Assign Item -->
+    <SliderModal :showModal="showAssignModal">
       <template v-slot:header>
         <div class="flex flex-col gap-y-5">
           <BaseTitle class="text-center" tag="h5" msg="Assign Items" />
@@ -127,7 +189,9 @@ const toogleShowModal = () => (showModal.value = !showModal.value)
         <div class="w-full flex gap-y-5 flex-col justify-start">
           <div class="flex gap-x-5 border-b-2 pb-3" v-for="(item, index) in assignTo" :key="item.id"
             :ref="el => (userContainerList[index] = el)">
-            <img :src="item.image" alt="profile-preview" width="30" height="30" class="rounded-full block" />
+            <img v-if="item.image" :src="item.image" alt="profile-preview" width="30" height="30"
+              class="rounded-full block" />
+            <InitialAvatar v-else :name="item.name" />
             <BaseParagraph :contenteditable="true" :msg="item.name" />
           </div>
         </div>
@@ -141,7 +205,7 @@ const toogleShowModal = () => (showModal.value = !showModal.value)
       </template>
       <template v-slot:fotoer>
         <div class="flex justify-between gap-x-3 sticky top-0">
-          <PrevButton @handleClick="showModal = false" />
+          <PrevButton @handleClick="showAssignModal = false" />
           <BaseButton msg="Done" type="button" />
         </div>
       </template>

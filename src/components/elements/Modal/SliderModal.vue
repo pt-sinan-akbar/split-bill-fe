@@ -96,11 +96,11 @@ const stopDragging = () => {
   position: absolute;
   left: 0;
   right: 0;
-  height: 100vh;
-  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
+  width: 100%;
   z-index: 5;
-  bottom: -100vh;
+  bottom: -100%;
 }
 
 .panel {
