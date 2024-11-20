@@ -27,17 +27,22 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'handleHold', data: string): void
+  (e: 'handleClick', data: string): void
   (e: 'handleEdit', data: Array<string>, indexData: number): void
 }>()
 
 const holdDuration = ref<number>(500)
 const holdTimeout = ref<NodeJS.Timeout | null>(null)
 
-const handleWhenHolding = (e: MouseEvent, data: string): void => {
-  holdTimeout.value = setTimeout(() => {
-    emit('handleHold', data)
-  }, holdDuration.value)
+const handleClick = (e: MouseEvent, data: string): void => {
+    emit('handleClick', data)
 }
+
+//const handleWhenHolding = (e: MouseEvent, data: string): void => {
+//  holdTimeout.value = setTimeout(() => {
+//    emit('handleHold', data)
+//  }, holdDuration.value)
+//}
 
 const handleEdit = (_: MouseEvent, data: Array<string>, indexData: number): void => {
   emit('handleEdit', data, indexData)
@@ -66,7 +71,7 @@ const editIcon = `
       <fwb-table-row v-for="(bd, rowIndex) in body" :key="rowIndex">
         <fwb-table-cell v-if="withNumber">
           {{ rowIndex + 1 }}</fwb-table-cell>
-        <fwb-table-cell v-for="(data, colIndex) in bd" :key="colIndex" @touchstart="handleWhenHolding($event, data)"
+        <fwb-table-cell v-for="(data, colIndex) in bd" :key="colIndex" @click="handleClick($event, data)"
           @touchend="handleWhenStopHolding" :contenteditable="isEditable">
           {{ data }}
         </fwb-table-cell>

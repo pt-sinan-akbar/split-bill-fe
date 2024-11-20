@@ -8,6 +8,8 @@ import SliderModal from '../elements/Modal/SliderModal.vue'
 import PrevButton from '../elements/Button/Variants/PrevButton.vue'
 import InitialAvatar from '../elements/InitialAvatar.vue'
 import BaseInput from '../elements/BaseInput.vue'
+import BaseModal from '../elements/Modal/BaseModal.vue'
+import BaseAccordion from '../elements/BaseAccordion.vue'
 
 const emit = defineEmits<{
   (e: 'next-step'): void
@@ -32,6 +34,9 @@ const userContainerList = ref<Array<any>>([])
 const touchStartX = ref<number>(0)
 const touchEndX = ref<number>(0)
 const currEditIndexData = ref<number>(0)
+const taxBill = ref<number>(10000)
+const isReviewing = ref<boolean>(false)
+const isSelectedItem = ref<boolean>(false)
 
 const itemBillDetail = ref<ItemBill>({
   name: '',
@@ -51,12 +56,10 @@ const assignTo = ref<Array<AssignTo>>([
   {
     id: 1,
     name: 'John Doe',
-    image: 'https://randomuser.me/api/portraits/thumb/men/87.jpg',
   },
   {
     id: 2,
     name: 'Jane Doe',
-    image: 'https://randomuser.me/api/portraits/thumb/men/87.jpg',
   },
   {
     id: 3,
@@ -102,23 +105,38 @@ const handleEditItem = (data: Array<string>, indexData: number): void => {
     Quantity: parseInt(data[1]),
     price: parseInt(data[2]),
   }
-  currEditIndexData.value = indexData;
+  currEditIndexData.value = indexData
   toogleShowEditItemModal()
 }
 
 const editItemBill = (): void => {
-  const { name, Quantity, price }  = itemBillDetail.value
-  body.value[currEditIndexData.value] =  [name, Quantity.toString(), price.toString()]
-  console.log("item detail: ", itemBillDetail.value)
+  const { name, Quantity, price } = itemBillDetail.value
+  body.value[currEditIndexData.value] = [
+    name,
+    Quantity.toString(),
+    price.toString(),
+  ]
+  console.log('item detail: ', itemBillDetail.value)
   toogleShowEditItemModal()
 }
 
 const toogleShowModal = () => (showAssignModal.value = !showAssignModal.value)
+const toogleReviewing = () => (isReviewing.value = !isReviewing.value)
 const handleHold = (data: string): void => {
   toogleShowModal()
 }
 const toogleShowEditItemModal = () =>
   (showEditItemModal.value = !showEditItemModal.value)
+
+const totalBillPrice = computed<string>(() => {
+  let total: number = 0
+  body.value.map(item => {
+    let subTotal: number = parseInt(item[1]) * parseInt(item[2])
+    total += subTotal
+  })
+  total += taxBill.value
+  return total.toString()
+})
 </script>
 
 <template>
@@ -131,7 +149,7 @@ const toogleShowEditItemModal = () =>
       </section>
       <section class="flex flex-col gap-y-5">
         <BaseTitle className="text-center" tag="h6" :msg="billTitle" />
-        <BaseTable :withNumber="false" :body="body" @handle-hold="handleHold" :has-edit-action="true"
+        <BaseTable :withNumber="false" :body="body" @handle-click="handleHold" :has-edit-action="true"
           @handle-edit="handleEditItem" />
         <div class="flex justify-between mt-5">
           <BaseParagraph msg="Tax" />
@@ -139,25 +157,48 @@ const toogleShowEditItemModal = () =>
         </div>
         <div class="flex justify-between">
           <BaseParagraph msg="Service" />
-          <BaseParagraph :contenteditable="true" msg="11000" />
+          <BaseParagraph :contenteditable="true" :msg="taxBill.toString()" />
         </div>
         <div class="flex justify-between mt-5">
           <BaseParagraph className="font-semibold" msg="Total" />
-          <BaseParagraph msg="11000" />
+          <BaseParagraph :msg="totalBillPrice" />
         </div>
       </section>
     </div>
     <div class="w-full flex gap-x-3">
       <PrevButton @handleClick="emit('prev-step')" />
-      <BaseButton msg="Continue" type="button" @handleClick="toogleShowModal" />
+      <BaseButton msg="Review Items" type="button" @handleClick="toogleReviewing" />
       <!--  <BaseButton msg="Continue" type="button" @handleClick="emit('next-step')" /> -->
     </div>
+    <!-- Review Items -->
+    <SliderModal :show-modal="isReviewing">
+      <template v-slot:header>
+        <BaseTitle tag="h5" msg="Review Items" />
+      </template>
+      <template v-slot:body>
+        <!-- TODO: Add items based on the user -->
+        <div class="flex gap-y-5 pb-5 items-center flex-col" >
+          <BaseAccordion v-for="(item, index) in assignTo" :key="item.id" :ref="el => (userContainerList[index] = el)">
+            <template v-slot:title>
+              <div class="flex gap-x-5 items-center">
+                <img v-if="item.image" :src="item.image" alt="profile-preview" width="30" height="30"
+                  class="rounded-full block" />
+                <InitialAvatar v-else :name="item.name" />
+                <BaseParagraph :contenteditable="true" :msg="item.name" />
+              </div>
+            </template>
+            <template v-slot:body> hello </template>
+          </BaseAccordion>
+        </div>
+      </template>
+    </SliderModal>
     <!-- Edit Item -->
     <SliderModal :showModal="showEditItemModal">
       <template v-slot:header>
         <BaseTitle tag="h5" msg="Edit Item" class="w-full text-start" />
       </template>
       <template v-slot:body>
+        <!-- TODO: Make the isSelectedItem dynamic for each container -->
         <div class="flex flex-col gap-y-5">
           <BaseInput v-model:model-value="itemBillDetail.name" placeholder="Item Name" label="Item Name" type="text" />
           <div class="flex justify-between gap-x-5">
@@ -170,7 +211,7 @@ const toogleShowEditItemModal = () =>
       <template v-slot:fotoer>
         <div class="flex justify-between gap-x-3 mt-5 sticky top-0">
           <PrevButton @handleClick="toogleShowEditItemModal" />
-          <BaseButton msg="Done" type="button" @handle-click="editItemBill"/>
+          <BaseButton msg="Done" type="button" @handle-click="editItemBill" />
         </div>
       </template>
     </SliderModal>
@@ -187,12 +228,23 @@ const toogleShowEditItemModal = () =>
       </template>
       <template v-slot:body>
         <div class="w-full flex gap-y-5 flex-col justify-start">
-          <div class="flex gap-x-5 border-b-2 pb-3" v-for="(item, index) in assignTo" :key="item.id"
+          <div class="flex gap-x-5 border-b-2 pb-3 items-center" v-for="(item, index) in assignTo" :key="item.id"
             :ref="el => (userContainerList[index] = el)">
             <img v-if="item.image" :src="item.image" alt="profile-preview" width="30" height="30"
               class="rounded-full block" />
             <InitialAvatar v-else :name="item.name" />
-            <BaseParagraph :contenteditable="true" :msg="item.name" />
+            <div class="flex flex-col w-full">
+              <BaseParagraph :contenteditable="true" :msg="item.name" />
+              <div class="flex justify-between items-center">
+                <BaseTitle tag="h6" msg="Rp 10000" />
+                <div class="flex gap-x-3 items-center">
+                  <!-- TODO: Dynamic quantity -->
+                  <BaseButton :outline="true" msg="-" />
+                  <BaseParagraph msg="1" />
+                  <BaseButton msg="+" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="flex gap-x-5 my-3 justify-end">

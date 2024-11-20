@@ -17,7 +17,7 @@ const props = withDefaults(
   },
 )
 
-const initClass = ref<string>(`${props.className} m-0`)
+const initClass = ref<string>(`${props.className} m-0 align-middle h-full`)
 const clipboardMsg = ref<HTMLElement | null>(null)
 
 const emit = defineEmits<{

@@ -141,7 +141,7 @@ const stopDragging = () => {
 
 .modal-wrapper {
   height: auto;
-  padding: var(--PADDING_X);
+  padding: 30px;
 }
 
 .panel-handle {
