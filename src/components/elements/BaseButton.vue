@@ -16,6 +16,7 @@ const props = withDefaults(
     size?: 'xs' | 'sm' | 'md' | 'lg'
     msgCopy?: string
     successCopy?: string
+    isDisabled?: boolean
   }>(),
   {
     type: 'button',
@@ -25,6 +26,7 @@ const props = withDefaults(
     color: 'yellow',
     outline: false,
     size: 'md',
+    isDisabled: false,
   },
 )
 
@@ -45,7 +47,7 @@ const initBtnContentClass = ref<string>(
 
 <template>
   <fwb-button :size="size" :class="initBtnClass" :color="color" @click="handleClick" :outline="outline" :pill="pill"
-    :square="square">
+    :square="square" :disabled="isDisabled">
     <div v-if="$slots.icon" class="flex gap-x-3 justify-start items-center">
       <slot name="icon"></slot>
       <slot></slot>

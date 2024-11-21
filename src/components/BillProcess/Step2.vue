@@ -20,6 +20,8 @@ interface AssignTo {
   id: number
   name: string
   image?: string
+  price: number
+  quantity: number
 }
 
 interface ItemBill {
@@ -39,8 +41,14 @@ const isReviewing = ref<boolean>(false)
 const isSelectedItem = ref<boolean>(false)
 
 const itemBillDetail = ref<ItemBill>({
-  name: '',
   Quantity: 0,
+  name: '',
+  price: 0,
+})
+
+const activeItemBIll = ref<ItemBill>({
+  Quantity: 0,
+  name: '',
   price: 0,
 })
 
@@ -56,14 +64,20 @@ const assignTo = ref<Array<AssignTo>>([
   {
     id: 1,
     name: 'John Doe',
+    price: 0,
+    quantity: 0,
   },
   {
     id: 2,
     name: 'Jane Doe',
+    price: 0,
+    quantity: 0,
   },
   {
     id: 3,
     name: 'John Doe',
+    price: 0,
+    quantity: 0,
   },
 ])
 
@@ -72,6 +86,8 @@ const addNewUser = (): void => {
     id: assignTo.value.length + 1,
     name: 'New User',
     image: 'https://randomuser.me/api/portraits/thumb/women/96.jpg',
+    price: 0,
+    quantity: 0,
   })
 }
 
@@ -122,7 +138,12 @@ const editItemBill = (): void => {
 
 const toogleShowModal = () => (showAssignModal.value = !showAssignModal.value)
 const toogleReviewing = () => (isReviewing.value = !isReviewing.value)
-const handleHold = (data: string): void => {
+const handleClickBillItem = (data: Array<string>): void => {
+  activeItemBIll.value = {
+    name: data[0],
+    Quantity: parseInt(data[1]),
+    price: parseInt(data[2]),
+  }
   toogleShowModal()
 }
 const toogleShowEditItemModal = () =>
@@ -137,6 +158,16 @@ const totalBillPrice = computed<string>(() => {
   total += taxBill.value
   return total.toString()
 })
+
+const changeQuantity = (userIndex: number, operation: 'add' | 'sub'): void => {
+  if (operation === 'add') {
+    activeItemBIll.value.Quantity++
+    assignTo.value[userIndex].quantity--
+  } else {
+    activeItemBIll.value.Quantity--
+    assignTo.value[userIndex].quantity++
+  }
+}
 </script>
 
 <template>
@@ -149,7 +180,8 @@ const totalBillPrice = computed<string>(() => {
       </section>
       <section class="flex flex-col gap-y-5">
         <BaseTitle className="text-center" tag="h6" :msg="billTitle" />
-        <BaseTable :withNumber="false" :body="body" @handle-click="handleHold" :has-edit-action="true"
+        <!-- FIX: fix the edit click and table click bug -->
+        <BaseTable :withNumber="false" :body="body" @handle-click="handleClickBillItem" :has-edit-action="true"
           @handle-edit="handleEditItem" />
         <div class="flex justify-between mt-5">
           <BaseParagraph msg="Tax" />
@@ -177,7 +209,7 @@ const totalBillPrice = computed<string>(() => {
       </template>
       <template v-slot:body>
         <!-- TODO: Add items based on the user -->
-        <div class="flex gap-y-5 pb-5 items-center flex-col" >
+        <div class="flex gap-y-5 pb-5 items-center flex-col">
           <BaseAccordion v-for="(item, index) in assignTo" :key="item.id" :ref="el => (userContainerList[index] = el)">
             <template v-slot:title>
               <div class="flex gap-x-5 items-center">
@@ -220,9 +252,12 @@ const totalBillPrice = computed<string>(() => {
       <template v-slot:header>
         <div class="flex flex-col gap-y-5">
           <BaseTitle class="text-center" tag="h5" msg="Assign Items" />
-          <div class="flex justify-between items-center">
-            <BaseTitle tag="h6" msg="Ayam Geprek" />
-            <BaseParagraph msg="15000" />
+          <div class="flex flex-col justify-between items-center">
+            <BaseTitle tag="h6" :msg="activeItemBIll.name" />
+            <div class="flex justify-start gap-x-3 w-full">
+              <BaseParagraph :msg="activeItemBIll.Quantity.toString() + 'x'" />
+              <BaseParagraph :msg="activeItemBIll.price.toString()" />
+            </div>
           </div>
         </div>
       </template>
@@ -239,9 +274,14 @@ const totalBillPrice = computed<string>(() => {
                 <BaseTitle tag="h6" msg="Rp 10000" />
                 <div class="flex gap-x-3 items-center">
                   <!-- TODO: Dynamic quantity -->
-                  <BaseButton :outline="true" msg="-" />
-                  <BaseParagraph msg="1" />
-                  <BaseButton msg="+" />
+                  <BaseButton :outline="true" msg="-" :is-disabled="item.quantity === 0" @handle-click="
+                    changeQuantity(index, 'add')
+                    " />
+                  <BaseParagraph :msg="item.quantity.toString()" />
+                  <BaseButton msg="+" :is-disabled="activeItemBIll.Quantity === 0
+                    " @handle-click="
+                                          changeQuantity(index, 'sub')
+                                          " />
                 </div>
               </div>
             </div>
