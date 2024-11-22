@@ -3,7 +3,7 @@ import { RouterView } from 'vue-router'
 </script>
 
 <template>
-    <main id="root-container-app">
-        <RouterView />
-    </main>
+  <main class="py-10">
+    <RouterView />
+  </main>
 </template>

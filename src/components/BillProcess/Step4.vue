@@ -30,8 +30,10 @@ const copyUrl = (): void => {
   <div class="h-screen flex flex-col justify-between">
     <section class="flex flex-col gap-y-3">
       <BaseTitle className="text-center" tag="h5" msg="Final step!" />
-      <BaseParagraph className="text-center"
-        msg="Bill splitted! now share this link to your friends so they can see how much they owe you" />
+      <BaseParagraph
+        className="text-center"
+        msg="Bill splitted! now share this link to your friends so they can see how much they owe you"
+      />
     </section>
     <UrlButton :msg="urlMsg" @handle-click="copyUrl" />
     <div class="flex flex-col gap-y-10">

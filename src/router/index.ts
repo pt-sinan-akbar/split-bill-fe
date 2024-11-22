@@ -17,7 +17,7 @@ const router = createRouter({
       path: '/s/:id',
       name: 'share',
       component: () => import('../views/ShareView.vue'),
-    }
+    },
   ],
 })
 

@@ -31,15 +31,36 @@ const handleSubmit = (): void => {
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit" class="h-screen flex flex-col justify-between">
+  <form
+    @submit.prevent="handleSubmit"
+    class="h-screen flex flex-col justify-between"
+  >
     <section class="flex flex-col gap-y-3">
       <BaseTitle className="text-center" tag="h5" msg="Insert Your Details" />
-      <BaseParagraph className="text-center" msg="To let your friends knows where to pay" />
+      <BaseParagraph
+        className="text-center"
+        msg="To let your friends knows where to pay"
+      />
     </section>
     <div class="flex flex-col gap-y-10">
-      <BaseInput v-model:model-value="billOwnerData.name" placeholder="Name" label="Name" type="text" />
-      <BaseInput v-model:model-value="billOwnerData.contact" placeholder="Contact" label="Contact" type="number" />
-      <BaseInput v-model:model-value="billOwnerData.paymentInfo" placeholder="Pay to" label="Pay To" type="text" />
+      <BaseInput
+        v-model:model-value="billOwnerData.name"
+        placeholder="Name"
+        label="Name"
+        type="text"
+      />
+      <BaseInput
+        v-model:model-value="billOwnerData.contact"
+        placeholder="Contact"
+        label="Contact"
+        type="number"
+      />
+      <BaseInput
+        v-model:model-value="billOwnerData.paymentInfo"
+        placeholder="Pay to"
+        label="Pay To"
+        type="text"
+      />
     </div>
     <div class="w-full flex gap-x-3">
       <PrevButton @handleClick="emit('prev-step')" />

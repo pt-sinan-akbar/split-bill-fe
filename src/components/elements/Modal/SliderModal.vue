@@ -69,10 +69,7 @@ const onDrag = e => {
   const deltaY = currentY - startY
 
   const newHeight = Math.max(
-    Math.min(
-      ((startHeight - deltaY) / window.innerHeight) * 100,
-      MAX_HEIGHT,
-    ),
+    Math.min(((startHeight - deltaY) / window.innerHeight) * 100, MAX_HEIGHT),
     MIN_HEIGHT,
   )
 
@@ -164,10 +161,18 @@ const stopDragging = () => {
 <template>
   <div class="modal-container" ref="modalContainer"></div>
   <div ref="panel" class="panel">
-    <div ref="header" class="panel-header" @mousedown="startDragging" @touchstart="startDragging">
+    <div
+      ref="header"
+      class="panel-header"
+      @mousedown="startDragging"
+      @touchstart="startDragging"
+    >
       <div class="panel-handle"></div>
     </div>
-    <div ref="wrapper" class="flex flex-col justify-center items-center gap-y-5 modal-wrapper container">
+    <div
+      ref="wrapper"
+      class="flex flex-col justify-center items-center gap-y-5 modal-wrapper container"
+    >
       <div class="modal-header" ref="header">
         <slot name="header"></slot>
       </div>

@@ -27,12 +27,33 @@ const resetStep = (): number => (currStep.value = 1)
 
 <template>
   <Navbar />
-  <section ref="section" class="mx-auto my-5 flex flex-col justify-start items-center gap-y-10 w-full">
+  <section
+    ref="section"
+    class="mx-auto my-5 flex flex-col justify-start items-center gap-y-10 w-full"
+  >
     <Basesteps :total-steps="4" :active-step="currStep" />
-    <Step1 v-if="currStep === 1" :width="width" :height="height" :padding="padding" @next-step="increaseStep" />
-    <Step2 v-if="currStep === 2" @prev-step="decreseStep" @next-step="increaseStep" />
-    <Step3 v-if="currStep === 3" @prev-step="decreseStep" @next-step="increaseStep" />
-    <Step4 v-if="currStep === 4" @prev-step="resetStep" @next-step="increaseStep" />
+    <Step1
+      v-if="currStep === 1"
+      :width="width"
+      :height="height"
+      :padding="padding"
+      @next-step="increaseStep"
+    />
+    <Step2
+      v-if="currStep === 2"
+      @prev-step="decreseStep"
+      @next-step="increaseStep"
+    />
+    <Step3
+      v-if="currStep === 3"
+      @prev-step="decreseStep"
+      @next-step="increaseStep"
+    />
+    <Step4
+      v-if="currStep === 4"
+      @prev-step="resetStep"
+      @next-step="increaseStep"
+    />
   </section>
 </template>
 

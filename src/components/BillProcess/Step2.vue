@@ -20,8 +20,8 @@ interface AssignTo {
   id: number
   name: string
   image?: string
-  price: number
-  quantity: number
+  isSelected: boolean
+  items: ItemBill[]
 }
 
 interface ItemBill {
@@ -64,20 +64,20 @@ const assignTo = ref<Array<AssignTo>>([
   {
     id: 1,
     name: 'John Doe',
-    price: 0,
-    quantity: 0,
+    isSelected: false,
+    items: [{}] as ItemBill[],
   },
   {
     id: 2,
     name: 'Jane Doe',
-    price: 0,
-    quantity: 0,
+    isSelected: false,
+    items: [{}] as ItemBill[],
   },
   {
     id: 3,
     name: 'John Doe',
-    price: 0,
-    quantity: 0,
+    isSelected: false,
+    items: [{}] as ItemBill[],
   },
 ])
 
@@ -86,8 +86,8 @@ const addNewUser = (): void => {
     id: assignTo.value.length + 1,
     name: 'New User',
     image: 'https://randomuser.me/api/portraits/thumb/women/96.jpg',
-    price: 0,
-    quantity: 0,
+    isSelected: false,
+    items: [{}] as ItemBill[],
   })
 }
 
@@ -95,9 +95,7 @@ const checkDirection = (index: number): void => {
   const isSwipeLeft = touchEndX.value < touchStartX.value
   if (isSwipeLeft) {
     const removeUser = (index: number): void => {
-      assignTo.value = assignTo.value.filter(
-        user => user.id !== index + 1,
-      )
+      assignTo.value = assignTo.value.filter(user => user.id !== index + 1)
     }
     removeUser(index)
   }
@@ -159,14 +157,34 @@ const totalBillPrice = computed<string>(() => {
   return total.toString()
 })
 
-const changeQuantity = (userIndex: number, operation: 'add' | 'sub'): void => {
+const changeQuantity = (user: AssignTo, operation: 'add' | 'sub'): void => {
+  const lastBillItemIndex: number = user.items.length - 1
   if (operation === 'add') {
     activeItemBIll.value.Quantity++
-    assignTo.value[userIndex].quantity--
+    user.items[lastBillItemIndex].Quantity--
+    if (user.items[lastBillItemIndex].Quantity === 0) handleSelectUser(user)
   } else {
     activeItemBIll.value.Quantity--
-    assignTo.value[userIndex].quantity++
+    user.items[lastBillItemIndex].Quantity++
   }
+}
+
+const handleSelectUser = (user: AssignTo): void => {
+  if (!user.isSelected) {
+    let billTemp: ItemBill = { ...activeItemBIll.value }
+    billTemp.price = 0
+    billTemp.Quantity = 0
+    user.items.push(billTemp)
+  } else {
+    const lastBillItemIndex: number = user.items.length - 1
+    activeItemBIll.value.Quantity += user.items[lastBillItemIndex].Quantity
+    user.items.splice(lastBillItemIndex, 1)
+  }
+  user.isSelected = !user.isSelected
+}
+const handleIsDisabled = (user: AssignTo): boolean => {
+  const lastBillItemIndex: number = user.items.length - 1
+  return user.items[lastBillItemIndex].Quantity === 0
 }
 </script>
 
@@ -175,14 +193,20 @@ const changeQuantity = (userIndex: number, operation: 'add' | 'sub'): void => {
     <div class="flex flex-col gap-y-10">
       <section class="flex flex-col gap-y-3">
         <BaseTitle className="text-center" tag="h5" msg="List of Items" />
-        <BaseParagraph className="text-center"
-          msg="Select an item and assign to someone, you may edit if something wrong" />
+        <BaseParagraph
+          className="text-center"
+          msg="Select an item and assign to someone, you may edit if something wrong"
+        />
       </section>
       <section class="flex flex-col gap-y-5">
         <BaseTitle className="text-center" tag="h6" :msg="billTitle" />
-        <!-- FIX: fix the edit click and table click bug -->
-        <BaseTable :withNumber="false" :body="body" @handle-click="handleClickBillItem" :has-edit-action="true"
-          @handle-edit="handleEditItem" />
+        <BaseTable
+          :withNumber="false"
+          :body="body"
+          @handle-click="handleClickBillItem"
+          :has-edit-action="true"
+          @handle-hold="handleEditItem"
+        />
         <div class="flex justify-between mt-5">
           <BaseParagraph msg="Tax" />
           <BaseParagraph :contenteditable="true" msg="11000" />
@@ -199,22 +223,41 @@ const changeQuantity = (userIndex: number, operation: 'add' | 'sub'): void => {
     </div>
     <div class="w-full flex gap-x-3">
       <PrevButton @handleClick="emit('prev-step')" />
-      <BaseButton msg="Review Items" type="button" @handleClick="toogleReviewing" />
+      <BaseButton
+        msg="Review Items"
+        type="button"
+        @handleClick="toogleReviewing"
+      />
       <!--  <BaseButton msg="Continue" type="button" @handleClick="emit('next-step')" /> -->
     </div>
     <!-- Review Items -->
+    <!--
+        TODO:
+        * Add bill items based on the users have
+        * Add icon action to edit or delete (?)
+        * Move this modal to separate component
+    -->
     <SliderModal :show-modal="isReviewing">
       <template v-slot:header>
         <BaseTitle tag="h5" msg="Review Items" />
       </template>
       <template v-slot:body>
-        <!-- TODO: Add items based on the user -->
         <div class="flex gap-y-5 pb-5 items-center flex-col">
-          <BaseAccordion v-for="(item, index) in assignTo" :key="item.id" :ref="el => (userContainerList[index] = el)">
+          <BaseAccordion
+            v-for="(item, index) in assignTo"
+            :key="item.id"
+            :ref="el => (userContainerList[index] = el)"
+          >
             <template v-slot:title>
               <div class="flex gap-x-5 items-center">
-                <img v-if="item.image" :src="item.image" alt="profile-preview" width="30" height="30"
-                  class="rounded-full block" />
+                <img
+                  v-if="item.image"
+                  :src="item.image"
+                  alt="profile-preview"
+                  width="30"
+                  height="30"
+                  class="rounded-full block"
+                />
                 <InitialAvatar v-else :name="item.name" />
                 <BaseParagraph :contenteditable="true" :msg="item.name" />
               </div>
@@ -225,18 +268,35 @@ const changeQuantity = (userIndex: number, operation: 'add' | 'sub'): void => {
       </template>
     </SliderModal>
     <!-- Edit Item -->
+    <!--
+        TODO:
+        * Move this modal to separate component
+    -->
     <SliderModal :showModal="showEditItemModal">
       <template v-slot:header>
         <BaseTitle tag="h5" msg="Edit Item" class="w-full text-start" />
       </template>
       <template v-slot:body>
-        <!-- TODO: Make the isSelectedItem dynamic for each container -->
         <div class="flex flex-col gap-y-5">
-          <BaseInput v-model:model-value="itemBillDetail.name" placeholder="Item Name" label="Item Name" type="text" />
+          <BaseInput
+            v-model:model-value="itemBillDetail.name"
+            placeholder="Item Name"
+            label="Item Name"
+            type="text"
+          />
           <div class="flex justify-between gap-x-5">
-            <BaseInput v-model:model-value="itemBillDetail.price" placeholder="Price" label="Price" type="number" />
-            <BaseInput v-model:model-value="itemBillDetail.Quantity" placeholder="Quantity" label="Quantity"
-              type="number" />
+            <BaseInput
+              v-model:model-value="itemBillDetail.price"
+              placeholder="Price"
+              label="Price"
+              type="number"
+            />
+            <BaseInput
+              v-model:model-value="itemBillDetail.Quantity"
+              placeholder="Quantity"
+              label="Quantity"
+              type="number"
+            />
           </div>
         </div>
       </template>
@@ -248,51 +308,73 @@ const changeQuantity = (userIndex: number, operation: 'add' | 'sub'): void => {
       </template>
     </SliderModal>
     <!-- Assign Item -->
+    <!--
+        TODO:
+        * Make the total price dynamic
+        * Move this modal to separate component
+        FIX:
+        * Swipe event still has bug
+    -->
     <SliderModal :showModal="showAssignModal">
       <template v-slot:header>
         <div class="flex flex-col gap-y-5">
           <BaseTitle class="text-center" tag="h5" msg="Assign Items" />
-          <div class="flex flex-col justify-between items-center">
-            <BaseTitle tag="h6" :msg="activeItemBIll.name" />
-            <div class="flex justify-start gap-x-3 w-full">
-              <BaseParagraph :msg="activeItemBIll.Quantity.toString() + 'x'" />
-              <BaseParagraph :msg="activeItemBIll.price.toString()" />
-            </div>
-          </div>
+          <BaseTitle tag="h6" :msg="activeItemBIll.name" />
         </div>
       </template>
       <template v-slot:body>
         <div class="w-full flex gap-y-5 flex-col justify-start">
-          <div class="flex gap-x-5 border-b-2 pb-3 items-center" v-for="(item, index) in assignTo" :key="item.id"
-            :ref="el => (userContainerList[index] = el)">
-            <img v-if="item.image" :src="item.image" alt="profile-preview" width="30" height="30"
-              class="rounded-full block" />
+          <div
+            class="flex gap-x-5 border-b-2 pb-3 items-center"
+            v-for="(item, index) in assignTo"
+            :key="item.id"
+            :ref="el => (userContainerList[index] = el)"
+          >
+            <img
+              v-if="item.image"
+              :src="item.image"
+              alt="profile-preview"
+              width="30"
+              height="30"
+              class="rounded-full block"
+            />
             <InitialAvatar v-else :name="item.name" />
-            <div class="flex flex-col w-full">
-              <BaseParagraph :contenteditable="true" :msg="item.name" />
-              <div class="flex justify-between items-center">
-                <BaseTitle tag="h6" msg="Rp 10000" />
-                <div class="flex gap-x-3 items-center">
-                  <!-- TODO: Dynamic quantity -->
-                  <BaseButton :outline="true" msg="-" :is-disabled="item.quantity === 0" @handle-click="
-                    changeQuantity(index, 'add')
-                    " />
-                  <BaseParagraph :msg="item.quantity.toString()" />
-                  <BaseButton msg="+" :is-disabled="activeItemBIll.Quantity === 0
-                    " @handle-click="
-                                          changeQuantity(index, 'sub')
-                                          " />
-                </div>
+            <div class="flex justify-between items-center w-full">
+              <BaseParagraph
+                :contenteditable="true"
+                :msg="item.name"
+                @click="handleSelectUser(item)"
+              />
+              <div class="flex gap-x-3 items-center" v-if="item.isSelected">
+                <BaseButton
+                  :outline="true"
+                  msg="-"
+                  :is-disabled="handleIsDisabled(item)"
+                  @handle-click="changeQuantity(item, 'add')"
+                />
+                <BaseParagraph
+                  :msg="item.items[item.items.length - 1].Quantity.toString()"
+                />
+                <BaseButton
+                  msg="+"
+                  :is-disabled="activeItemBIll.Quantity === 0"
+                  @handle-click="changeQuantity(item, 'sub')"
+                />
               </div>
             </div>
           </div>
         </div>
         <div class="flex gap-x-5 my-3 justify-end">
-          <BaseButton @handle-click="addNewUser" :outline="true" size="sm" msg="Add user ..." />
+          <BaseButton
+            @handle-click="addNewUser"
+            :outline="true"
+            size="sm"
+            msg="Add user ..."
+          />
         </div>
         <div>
           <BaseParagraph msg="Tips" />
-          <BaseParagraph msg="Long-press to edit person name or swipe left to delete" />
+          <BaseParagraph msg="Swipe left to delete" />
         </div>
       </template>
       <template v-slot:fotoer>

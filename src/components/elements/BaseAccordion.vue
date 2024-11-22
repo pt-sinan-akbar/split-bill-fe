@@ -5,7 +5,6 @@ import {
   FwbAccordionHeader,
   FwbAccordionPanel,
 } from 'flowbite-vue'
-
 </script>
 
 <template>
