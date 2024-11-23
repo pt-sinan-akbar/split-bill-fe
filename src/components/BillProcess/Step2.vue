@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import BaseButton from '../elements/BaseButton.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
@@ -8,7 +8,6 @@ import SliderModal from '../elements/Modal/SliderModal.vue'
 import PrevButton from '../elements/Button/Variants/PrevButton.vue'
 import InitialAvatar from '../elements/InitialAvatar.vue'
 import BaseInput from '../elements/BaseInput.vue'
-import BaseModal from '../elements/Modal/BaseModal.vue'
 import BaseAccordion from '../elements/BaseAccordion.vue'
 
 const emit = defineEmits<{
@@ -21,10 +20,11 @@ interface AssignTo {
   name: string
   image?: string
   isSelected: boolean
-  items: ItemBill[]
+  items: Map<number, ItemBill>
 }
 
 interface ItemBill {
+  id: number
   name: string
   Quantity: number
   price: number
@@ -39,14 +39,18 @@ const currEditIndexData = ref<number>(0)
 const taxBill = ref<number>(10000)
 const isReviewing = ref<boolean>(false)
 const isSelectedItem = ref<boolean>(false)
+const errAssign = ref<HTMLElement | null>(null)
+const errMsg = ref<string>('')
 
 const itemBillDetail = ref<ItemBill>({
+  id: 0,
   Quantity: 0,
   name: '',
   price: 0,
 })
 
 const activeItemBIll = ref<ItemBill>({
+  id: 0,
   Quantity: 0,
   name: '',
   price: 0,
@@ -54,9 +58,9 @@ const activeItemBIll = ref<ItemBill>({
 
 // TODO: Refactor the dummy data to use the interface
 const body = ref<Array<Array<string>>>([
-  ['Pizza', '3', '15000'],
-  ['Burger', '3', '15000'],
-  ['idk', '3', '15000'],
+  ['1', 'Pizza', '3', '15000'],
+  ['2', 'Burger', '3', '15000'],
+  ['3', 'idk', '3', '15000'],
 ])
 const showAssignModal = ref<boolean>(false)
 const showEditItemModal = ref<boolean>(false)
@@ -65,19 +69,19 @@ const assignTo = ref<Array<AssignTo>>([
     id: 1,
     name: 'John Doe',
     isSelected: false,
-    items: [{}] as ItemBill[],
+    items: new Map<number, ItemBill>(),
   },
   {
     id: 2,
     name: 'Jane Doe',
     isSelected: false,
-    items: [{}] as ItemBill[],
+    items: new Map<number, ItemBill>(),
   },
   {
     id: 3,
     name: 'John Doe',
     isSelected: false,
-    items: [{}] as ItemBill[],
+    items: new Map<number, ItemBill>(),
   },
 ])
 
@@ -87,7 +91,7 @@ const addNewUser = (): void => {
     name: 'New User',
     image: 'https://randomuser.me/api/portraits/thumb/women/96.jpg',
     isSelected: false,
-    items: [{}] as ItemBill[],
+    items: new Map<number, ItemBill>(),
   })
 }
 
@@ -115,9 +119,10 @@ onMounted(() => {
 
 const handleEditItem = (data: Array<string>, indexData: number): void => {
   itemBillDetail.value = {
-    name: data[0],
-    Quantity: parseInt(data[1]),
-    price: parseInt(data[2]),
+    id: parseInt(data[0]),
+    name: data[1],
+    Quantity: parseInt(data[2]),
+    price: parseInt(data[3]),
   }
   currEditIndexData.value = indexData
   toogleShowEditItemModal()
@@ -130,7 +135,6 @@ const editItemBill = (): void => {
     Quantity.toString(),
     price.toString(),
   ]
-  console.log('item detail: ', itemBillDetail.value)
   toogleShowEditItemModal()
 }
 
@@ -138,10 +142,19 @@ const toogleShowModal = () => (showAssignModal.value = !showAssignModal.value)
 const toogleReviewing = () => (isReviewing.value = !isReviewing.value)
 const handleClickBillItem = (data: Array<string>): void => {
   activeItemBIll.value = {
-    name: data[0],
-    Quantity: parseInt(data[1]),
-    price: parseInt(data[2]),
+    id: parseInt(data[0]),
+    name: data[1],
+    Quantity: parseInt(data[2]),
+    price: parseInt(data[3]),
   }
+  assignTo.value.map(user => {
+    const userHasActiveItem: ItemBill | undefined = user.items.get(
+      activeItemBIll.value.id,
+    )
+    if (userHasActiveItem) {
+      user.isSelected = true
+    }
+  })
   toogleShowModal()
 }
 const toogleShowEditItemModal = () =>
@@ -158,33 +171,86 @@ const totalBillPrice = computed<string>(() => {
 })
 
 const changeQuantity = (user: AssignTo, operation: 'add' | 'sub'): void => {
-  const lastBillItemIndex: number = user.items.length - 1
+  const currItemId: number = activeItemBIll.value.id
+  const userItem: ItemBill | undefined = user.items.get(currItemId)
+  if (!userItem) return
   if (operation === 'add') {
     activeItemBIll.value.Quantity++
-    user.items[lastBillItemIndex].Quantity--
-    if (user.items[lastBillItemIndex].Quantity === 0) handleSelectUser(user)
+    userItem.Quantity--
+    if (userItem.Quantity === 0) handleSelectUser(user)
   } else {
     activeItemBIll.value.Quantity--
-    user.items[lastBillItemIndex].Quantity++
+    userItem.Quantity++
   }
 }
 
 const handleSelectUser = (user: AssignTo): void => {
+  const activeItemId = activeItemBIll.value.id
   if (!user.isSelected) {
     let billTemp: ItemBill = { ...activeItemBIll.value }
     billTemp.price = 0
     billTemp.Quantity = 0
-    user.items.push(billTemp)
+    user.items.set(activeItemId, billTemp)
   } else {
-    const lastBillItemIndex: number = user.items.length - 1
-    activeItemBIll.value.Quantity += user.items[lastBillItemIndex].Quantity
-    user.items.splice(lastBillItemIndex, 1)
+    const userItem: ItemBill | undefined = user.items.get(activeItemId)
+    if (!userItem) return
+    activeItemBIll.value.Quantity += userItem.Quantity
+    user.items.delete(activeItemId)
   }
   user.isSelected = !user.isSelected
 }
 const handleIsDisabled = (user: AssignTo): boolean => {
-  const lastBillItemIndex: number = user.items.length - 1
-  return user.items[lastBillItemIndex].Quantity === 0
+  const activeItemId = activeItemBIll.value.id
+  const userItem: ItemBill | undefined = user.items.get(activeItemId)
+  if (!userItem) return true
+  return userItem.Quantity === 0
+}
+
+const handleSubmitAssignItem = (): void => {
+  let isValid: boolean = true
+  // ISSUE: Performace issue
+  assignTo.value.map(user => {
+    const userItem: ItemBill | undefined = user.items.get(
+      activeItemBIll.value.id,
+    )
+    if (user.isSelected && userItem && userItem.Quantity === 0) {
+      errMsg.value = 'Please assign the item to the user'
+      isValid = false
+    }
+  })
+  if (isValid) {
+    assignTo.value.map(user => {
+      user.isSelected = false
+    })
+    clearActiveItemBill()
+    showAssignModal.value = false
+  }
+}
+
+const handleCancelAssignItem = (): void => {
+  const activeItemId = activeItemBIll.value.id
+  clearUserBillItem(activeItemId)
+  clearActiveItemBill()
+  showAssignModal.value = false
+}
+
+const clearUserBillItem = (itemId: number) => {
+  assignTo.value.map(user => {
+    const userItem: ItemBill | undefined = user.items.get(itemId)
+    if (userItem) {
+      user.items.delete(itemId)
+    }
+    user.isSelected = false
+  })
+}
+
+const clearActiveItemBill = (): void => {
+  activeItemBIll.value = {
+    id: 0,
+    Quantity: 0,
+    name: '',
+    price: 0,
+  }
 }
 </script>
 
@@ -228,13 +294,11 @@ const handleIsDisabled = (user: AssignTo): boolean => {
         type="button"
         @handleClick="toogleReviewing"
       />
-      <!--  <BaseButton msg="Continue" type="button" @handleClick="emit('next-step')" /> -->
     </div>
     <!-- Review Items -->
     <!--
         TODO:
         * Add bill items based on the users have
-        * Add icon action to edit or delete (?)
         * Move this modal to separate component
     -->
     <SliderModal :show-modal="isReviewing">
@@ -262,8 +326,30 @@ const handleIsDisabled = (user: AssignTo): boolean => {
                 <BaseParagraph :contenteditable="true" :msg="item.name" />
               </div>
             </template>
-            <template v-slot:body> hello </template>
+            <template v-slot:body>
+              <ol>
+                <li v-for="[_, it] in [...item.items]" :key="index">
+                  {{ it.name }}
+                </li>
+              </ol>
+            </template>
           </BaseAccordion>
+        </div>
+      </template>
+      <template v-slot:fotoer>
+        <div class="flex gap-x-5">
+          <BaseButton
+            msg="Cancel"
+            type="button"
+            @handleClick="toogleReviewing"
+            color="red"
+            :outline="true"
+          />
+          <BaseButton
+            msg="Done"
+            type="button"
+            @handle-click="emit('next-step')"
+          />
         </div>
       </template>
     </SliderModal>
@@ -310,7 +396,6 @@ const handleIsDisabled = (user: AssignTo): boolean => {
     <!-- Assign Item -->
     <!--
         TODO:
-        * Make the total price dynamic
         * Move this modal to separate component
         FIX:
         * Swipe event still has bug
@@ -339,12 +424,11 @@ const handleIsDisabled = (user: AssignTo): boolean => {
               class="rounded-full block"
             />
             <InitialAvatar v-else :name="item.name" />
-            <div class="flex justify-between items-center w-full">
-              <BaseParagraph
-                :contenteditable="true"
-                :msg="item.name"
-                @click="handleSelectUser(item)"
-              />
+            <div
+              class="flex justify-between items-center w-full"
+              @click="handleSelectUser(item)"
+            >
+              <BaseParagraph :contenteditable="false" :msg="item.name" />
               <div class="flex gap-x-3 items-center" v-if="item.isSelected">
                 <BaseButton
                   :outline="true"
@@ -353,7 +437,10 @@ const handleIsDisabled = (user: AssignTo): boolean => {
                   @handle-click="changeQuantity(item, 'add')"
                 />
                 <BaseParagraph
-                  :msg="item.items[item.items.length - 1].Quantity.toString()"
+                  :msg="
+                    item.items.get(activeItemBIll.id)?.Quantity.toString() ??
+                    '0'
+                  "
                 />
                 <BaseButton
                   msg="+"
@@ -364,6 +451,11 @@ const handleIsDisabled = (user: AssignTo): boolean => {
             </div>
           </div>
         </div>
+        <BaseParagraph
+          ref="errAssign"
+          :msg="errMsg"
+          class-name="text-red-500 mb-2 mt-3"
+        />
         <div class="flex gap-x-5 my-3 justify-end">
           <BaseButton
             @handle-click="addNewUser"
@@ -379,8 +471,21 @@ const handleIsDisabled = (user: AssignTo): boolean => {
       </template>
       <template v-slot:fotoer>
         <div class="flex justify-between gap-x-3 sticky top-0">
-          <PrevButton @handleClick="showAssignModal = false" />
-          <BaseButton msg="Done" type="button" />
+          <!-- TODO:
+               * change prev button to cancel button
+            -->
+          <BaseButton
+            msg="Cancel"
+            type="button"
+            @handleClick="handleCancelAssignItem"
+            color="red"
+            :outline="true"
+          />
+          <BaseButton
+            msg="Done"
+            type="button"
+            @handleClick="handleSubmitAssignItem"
+          />
         </div>
       </template>
     </SliderModal>

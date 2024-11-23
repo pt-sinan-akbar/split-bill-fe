@@ -22,7 +22,7 @@ let startY
 let startHeight
 
 const MIN_HEIGHT = 20
-const MAX_HEIGHT = 95
+const MAX_HEIGHT = 100
 
 onMounted(() => {
   const headerHeight = header.value.offsetHeight
@@ -105,7 +105,7 @@ const stopDragging = () => {
   left: 0;
   right: 0;
   bottom: -100vh;
-  max-height: 80vh !important;
+  max-height: 100vh !important;
   background: white;
   border-radius: 16px 16px 0 0;
   transform: translateY(100%);
