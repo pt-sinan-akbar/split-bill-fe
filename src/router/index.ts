@@ -14,8 +14,13 @@ const router = createRouter({
       component: () => import('../views/GetStartedView.vue'),
     },
     {
-      path: '/scan',
-      name: 'add-split-bill',
+      path: '/bill-creator/scan',
+      name: 'scan-bill',
+      component: () => import('../components/BillProcess/Index.vue'),
+    },
+    {
+      path: '/bill-creator/:id',
+      name: 'bill-creator-id',
       component: () => import('../components/BillProcess/Index.vue'),
     },
     {

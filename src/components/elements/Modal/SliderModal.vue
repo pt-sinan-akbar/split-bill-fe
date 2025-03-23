@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 
+const props = withDefaults(
+  defineProps<{
+    closeFromBackground: () => void
+  }>(),
+  {
+    closeFromBackground: () => {},
+  },
+)
 const panel = ref<HTMLElement | null>(null)
 const wrapper = ref<HTMLElement | null>(null)
 const header = ref<HTMLElement | null>(null)
@@ -137,7 +145,7 @@ const stopDragging = () => {
 </style>
 
 <template>
-  <div class="modal-container open" ref="modalContainer"></div>
+  <div class="modal-container open" ref="modalContainer" @click.stop="props.closeFromBackground"/>
   <div ref="panel" class="panel">
     <div
       ref="header"
