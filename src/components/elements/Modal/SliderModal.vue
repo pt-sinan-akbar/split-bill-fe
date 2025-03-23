@@ -1,15 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    showModal: boolean
-  }>(),
-  {
-    showModal: false,
-  },
-)
-
 const panel = ref<HTMLElement | null>(null)
 const wrapper = ref<HTMLElement | null>(null)
 const header = ref<HTMLElement | null>(null)
@@ -22,30 +13,16 @@ let startY
 let startHeight
 
 const MIN_HEIGHT = 20
-const MAX_HEIGHT = 95
+const MAX_HEIGHT = 100
 
 onMounted(() => {
   const headerHeight = header.value.offsetHeight
   const bodyHeight = body.value.offsetHeight
   const footerHeight = footer.value.offsetHeight
-  const wrapperHeight = headerHeight + bodyHeight + footerHeight
-  panel.value.style.height = `${wrapperHeight * 2 + 60}px`
+  const wrapperHeight = (headerHeight + bodyHeight + footerHeight) * 1.5
+  panel.value.style.height = `${(wrapperHeight < (screen.height * 0.8) ? wrapperHeight : (screen.height * 0.8))}px`
+  panel.value.classList.add('open')
 })
-
-watch(
-  () => props.showModal,
-  newVal => {
-    console.log('showModal', newVal)
-    if (newVal) {
-      panel.value?.classList.add('open')
-      modalContainer.value.classList.add('open')
-    } else {
-      panel.value?.classList.remove('open')
-      modalContainer.value?.classList.remove('open')
-    }
-  },
-  { immediate: true },
-)
 
 const startDragging = e => {
   isDragging = true
@@ -69,10 +46,7 @@ const onDrag = e => {
   const deltaY = currentY - startY
 
   const newHeight = Math.max(
-    Math.min(
-      ((startHeight - deltaY) / window.innerHeight) * 100,
-      MAX_HEIGHT,
-    ),
+    Math.min(((startHeight - deltaY) / window.innerHeight) * 100, MAX_HEIGHT),
     MIN_HEIGHT,
   )
 
@@ -96,11 +70,10 @@ const stopDragging = () => {
   position: absolute;
   left: 0;
   right: 0;
-  height: 100vh;
-  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
+  width: 100%;
   z-index: 5;
-  bottom: -100vh;
 }
 
 .panel {
@@ -108,13 +81,15 @@ const stopDragging = () => {
   left: 0;
   right: 0;
   bottom: -100vh;
-  max-height: 80vh !important;
+  max-height: 100vh !important;
   background: white;
   border-radius: 16px 16px 0 0;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   z-index: 10;
+  max-width: 768px;
+  margin-inline: auto;
 }
 
 .panel.open {
@@ -141,7 +116,7 @@ const stopDragging = () => {
 
 .modal-wrapper {
   height: auto;
-  padding: var(--PADDING_X);
+  padding: 30px;
 }
 
 .panel-handle {
@@ -162,12 +137,20 @@ const stopDragging = () => {
 </style>
 
 <template>
-  <div class="modal-container" ref="modalContainer"></div>
+  <div class="modal-container open" ref="modalContainer"></div>
   <div ref="panel" class="panel">
-    <div ref="header" class="panel-header" @mousedown="startDragging" @touchstart="startDragging">
+    <div
+      ref="header"
+      class="panel-header"
+      @mousedown="startDragging"
+      @touchstart="startDragging"
+    >
       <div class="panel-handle"></div>
     </div>
-    <div ref="wrapper" class="flex flex-col justify-center items-center gap-y-5 modal-wrapper container">
+    <div
+      ref="wrapper"
+      class="flex flex-col justify-center items-center gap-y-5 modal-wrapper container"
+    >
       <div class="modal-header" ref="header">
         <slot name="header"></slot>
       </div>

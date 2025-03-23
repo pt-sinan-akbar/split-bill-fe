@@ -5,7 +5,8 @@ import Step1 from './Step1.vue'
 import Step2 from './Step2.vue'
 import Step3 from './Step3.vue'
 import Step4 from './Step4.vue'
-import { watch } from 'vue'
+import { computed } from 'vue'
+import Navbar from '../elements/Navbar.vue'
 
 const section = ref<HTMLElement | null>(null)
 const width = ref<number>(100)
@@ -21,25 +22,45 @@ onMounted(() => {
 
 const increaseStep = (): number => currStep.value++
 const decreseStep = (): number => currStep.value--
-const resetStep = (): number => currStep.value = 1
-
-watch(currStep, newVal => {
-  console.log('value: ', newVal)
-})
+const resetStep = (): number => (currStep.value = 1)
 </script>
 
 <template>
-  <section ref="section" class="mx-auto my-10 flex flex-col justify-start items-center gap-y-10 w-full h-screen">
-    <Basesteps />
-    <Step1 v-if="currStep === 1" :width="width" :height="height" :padding="padding" @next-step="increaseStep" />
-    <Step2 v-if="currStep === 2" @prev-step="decreseStep" @next-step="increaseStep" />
-    <Step3 v-if="currStep === 3" @prev-step="decreseStep" @next-step="increaseStep" />
-    <Step4 v-if="currStep === 4" @prev-step="resetStep" @next-step="increaseStep" />
+  <Navbar />
+  <section
+    ref="section"
+    class="mx-auto my-5 flex flex-col justify-start items-center gap-y-10 w-full"
+  >
+    <Basesteps :total-steps="4" :active-step="currStep" />
+    <Step1
+      v-if="currStep === 1"
+      :width="width"
+      :height="height"
+      :padding="padding"
+      @next-step="increaseStep"
+    />
+    <Step2
+      v-if="currStep === 2"
+      @prev-step="decreseStep"
+      @next-step="increaseStep"
+    />
+    <Step3
+      v-if="currStep === 3"
+      @prev-step="decreseStep"
+      @next-step="increaseStep"
+    />
+    <Step4
+      v-if="currStep === 4"
+      @prev-step="resetStep"
+      @next-step="increaseStep"
+    />
   </section>
 </template>
 
 <style scoped>
 section {
   padding: 0 var(--PADDING_X);
+  height: 100%;
+  flex-grow: 1;
 }
 </style>

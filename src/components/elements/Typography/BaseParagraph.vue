@@ -17,7 +17,7 @@ const props = withDefaults(
   },
 )
 
-const initClass = ref<string>(`${props.className} m-0`)
+const initClass = ref<string>(`${props.className} m-0 align-middle h-full`)
 const clipboardMsg = ref<HTMLElement | null>(null)
 
 const emit = defineEmits<{
@@ -41,9 +41,18 @@ const resetClipboardMsg = (): void => {
 </script>
 
 <template>
-  <fwb-p :class="initClass" :contenteditable="contenteditable" @click="handleClick" @mouseleave="resetClipboardMsg">
+  <fwb-p
+    :class="initClass"
+    :contenteditable="contenteditable"
+    @click="handleClick"
+    @mouseleave="resetClipboardMsg"
+  >
     {{ msg }}
-    <span v-if="className?.includes('tooltip')" class="tooltiptext" ref="clipboardMsg">
+    <span
+      v-if="className?.includes('tooltip')"
+      class="tooltiptext"
+      ref="clipboardMsg"
+    >
       {{ msgCopy }}
     </span>
   </fwb-p>

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { FwbHeading } from 'flowbite-vue'
-import { ref} from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps<{
   tag: string
   className?: string
   msg: string
 }>()
-
 </script>
 
 <template>

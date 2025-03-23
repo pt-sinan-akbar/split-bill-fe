@@ -16,6 +16,7 @@ const props = withDefaults(
     size?: 'xs' | 'sm' | 'md' | 'lg'
     msgCopy?: string
     successCopy?: string
+    isDisabled?: boolean
   }>(),
   {
     type: 'button',
@@ -25,6 +26,7 @@ const props = withDefaults(
     color: 'yellow',
     outline: false,
     size: 'md',
+    isDisabled: false,
   },
 )
 
@@ -44,17 +46,35 @@ const initBtnContentClass = ref<string>(
 </script>
 
 <template>
-  <fwb-button :size="size" :class="initBtnClass" :color="color" @click="handleClick" :outline="outline" :pill="pill"
-    :square="square">
+  <fwb-button
+    :size="size"
+    :class="initBtnClass"
+    :color="color"
+    @click.stop="handleClick"
+    :outline="outline"
+    :pill="pill"
+    :square="square"
+    :disabled="isDisabled"
+  >
     <div v-if="$slots.icon" class="flex gap-x-3 justify-start items-center">
       <slot name="icon"></slot>
       <slot></slot>
-      <BaseParagraph v-if="msg" :className="initBtnContentClass" :msg="msg" :msg-copy="msgCopy"
-        :success-copy="successCopy" />
+      <BaseParagraph
+        v-if="msg"
+        :className="initBtnContentClass"
+        :msg="msg"
+        :msg-copy="msgCopy"
+        :success-copy="successCopy"
+      />
     </div>
     <div v-else>
       <slot></slot>
-      <BaseParagraph v-if="msg" :className="initBtnContentClass" :msg="msg" :msg-copy="msgCopy" />
+      <BaseParagraph
+        v-if="msg"
+        :className="initBtnContentClass"
+        :msg="msg"
+        :msg-copy="msgCopy"
+      />
     </div>
   </fwb-button>
 </template>

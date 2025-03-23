@@ -1,32 +1,35 @@
 :root {
-    --PRIMARY_BACKGROUND_COLOR: #e3a008;
-    --TEXT_LIGHT_COLOR: #f5f5f5;
-    --LINE_COLOR: #f4f4f4;
-    --MAX_WIDTH: 400px;
-    --PADDING_X: 60px;
+  --PRIMARY_BACKGROUND_COLOR: #e3a008;
+  --TEXT_LIGHT_COLOR: #f5f5f5;
+  --LINE_COLOR: #f4f4f4;
+  --MAX_WIDTH: 768px;
+  --PADDING_X: 60px;
 }
 
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-color: none;
+  box-sizing: border-box;
 }
 
 body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: purple;
+  background-color: #5F5F5F;
+  max-height: 100%;
+  max-width: 768px;
+  display: block;
+  margin: auto;
 }
 
-main {
-    width: var(--MAX_WIDTH);
-    position: relative;
-    min-height: 100vh;
-    background-color: white;
-    overflow: hidden;
+#app {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #FFFFFF;
+  flex-direction: column;
 }
 
-p, td:focus{
-    outline: none;
+p,
+td:focus {
+  outline: none;
 }

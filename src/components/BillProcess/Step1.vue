@@ -35,7 +35,11 @@ const constraints = ref<Object>({
 
 onMounted(async () => {
   if (video.value && canvas.value) {
-    ctx.value = canvas.value.getContext('2d')
+    ctx.value = canvas.value.getContext('2d', {
+      alpha: false,
+      desynchronized: true,
+      willReadFrequently: false,
+    })
     await initCamera()
   }
 })
@@ -43,12 +47,17 @@ onMounted(async () => {
 const initCamera = async () => {
   if (!video.value || !canvas.value) return
   try {
-    const stream = await navigator.mediaDevices.getUserMedia(
-      constraints.value,
-    )
+    const stream = await navigator.mediaDevices.getUserMedia(constraints.value)
     video.value.srcObject = stream
-    video.value.play()
-    requestAnimationFrame(draw)
+
+    video.value.onloadedmetadata = () => {
+      if (canvas.value && video.value) {
+        canvas.value.width = video.value.videoWidth
+        canvas.value.height = video.value.videoHeight
+        video.value.play()
+      }
+      requestAnimationFrame(draw)
+    }
   } catch (err) {
     console.error('Camera error:', err)
   }
@@ -56,6 +65,8 @@ const initCamera = async () => {
 
 const draw = () => {
   if (!ctx.value || !video.value || !canvas.value) return
+  ctx.value.imageSmoothingEnabled = true
+  ctx.value.imageSmoothingQuality = 'high'
   ctx.value.drawImage(
     video.value,
     0,
@@ -98,42 +109,86 @@ const handleCrop = async (): Promise<void> => {
 </script>
 
 <template>
-  <section class="flex flex-col justify-between gap-y-3 text-center w-full h-full">
+  <section
+    class="flex flex-col justify-between gap-y-3 text-center w-full h-full"
+  >
     <div class="flex flex-col gap-y-2">
       <BaseTitle tag="h5" msg="Scan your bill" />
       <BaseParagraph msg="it will split to everyone" />
     </div>
-    <video ref="video" autoplay playsinline webkit-playsinline muted hidden></video>
+    <video
+      ref="video"
+      autoplay
+      playsinline
+      webkit-playsinline
+      muted
+      hidden
+    ></video>
     <div class="my-5">
-      <div class="relative w-full pb-[177.78%]">
+      <div class="relative w-full pb-[150%]">
         <div class="absolute inset-0 rounded-lg overflow-hidden">
-          <canvas v-show="!hasCaptured" ref="canvas" :width="width" :height="height" :class="imgClass">
+          <canvas
+            v-show="!hasCaptured"
+            ref="canvas"
+            :width="width"
+            :height="height"
+            :class="imgClass"
+          >
           </canvas>
-          <img v-show="hasCaptured" src="#" :width="width" :height="height" alt="image-preview" ref="img"
-            :class="imgClass" />
+          <img
+            v-show="hasCaptured"
+            src="#"
+            :width="width"
+            :height="height"
+            alt="image-preview"
+            ref="img"
+            :class="imgClass"
+          />
         </div>
       </div>
     </div>
     <div class="flex flex-col gap-y-3 text-center">
-      <BaseButton v-show="!hasCaptured" msg="Capture" type="button" @handleClick="handleCapture" />
+      <BaseButton
+        v-show="!hasCaptured"
+        msg="Capture"
+        type="button"
+        @handleClick="handleCapture"
+      />
       <div class="flex flex-col gap-y-3" v-show="hasCaptured">
-        <BaseButton msg="Capture Again" type="button" @click="hasCaptured = false" />
+        <BaseButton
+          msg="Capture Again"
+          type="button"
+          @click="hasCaptured = false"
+        />
         <BaseParagraph msg="or" />
-        <BaseButton msg="Continue" type="button" @handleClick="emit('next-step')" />
+        <BaseButton
+          msg="Continue"
+          type="button"
+          @handleClick="emit('next-step')"
+        />
       </div>
       <div class="flex flex-col gap-y-3" v-show="!hasCaptured">
         <BaseParagraph msg="or" />
         <BaseButton type="button">
           <label for="files" class="btn">Upload from gallery</label>
-          <input id="files" :style="{ visibility: 'hidden', display: 'none' }" @change="handleImgChange($event)"
-            type="file" />
+          <input
+            id="files"
+            :style="{ visibility: 'hidden', display: 'none' }"
+            @change="handleImgChange($event)"
+            type="file"
+          />
         </BaseButton>
       </div>
     </div>
   </section>
-  <BaseModal v-model:isShowModal="isShowModal">
+  <BaseModal v-model:isShowModal="isShowModal" v-if="video">
     <template #body>
-      <CropperContainer ref="cropperRef" :img="imgToCrop" :imgWidth="width" :imgHeight="height" />
+      <CropperContainer
+        ref="cropperRef"
+        :img="imgToCrop"
+        :imgWidth="video.videoWidth"
+        :imgHeight="video.videoHeight"
+      />
     </template>
     <template #footer>
       <BaseButton msg="Crop" @handleClick="handleCrop" />
