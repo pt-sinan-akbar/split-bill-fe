@@ -2,7 +2,7 @@
   --PRIMARY_BACKGROUND_COLOR: #e3a008;
   --TEXT_LIGHT_COLOR: #f5f5f5;
   --LINE_COLOR: #f4f4f4;
-  --MAX_WIDTH: 400px;
+  --MAX_WIDTH: 768px;
   --PADDING_X: 60px;
 }
 
@@ -14,18 +14,19 @@
 }
 
 body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: purple;
+  background-color: #5F5F5F;
+  max-height: 100%;
+  max-width: 768px;
+  display: block;
+  margin: auto;
 }
 
-main {
-  width: var(--MAX_WIDTH);
-  position: relative;
+#app {
+  display: flex;
   min-height: 100vh;
-  background-color: white;
-  overflow: hidden;
+  width: 100%;
+  background-color: #FFFFFF;
+  flex-direction: column;
 }
 
 p,

@@ -60,6 +60,7 @@ const resetStep = (): number => (currStep.value = 1)
 <style scoped>
 section {
   padding: 0 var(--PADDING_X);
-  min-height: 100vh;
+  height: 100%;
+  flex-grow: 1;
 }
 </style>

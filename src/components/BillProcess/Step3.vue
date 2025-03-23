@@ -33,7 +33,7 @@ const handleSubmit = (): void => {
 <template>
   <form
     @submit.prevent="handleSubmit"
-    class="h-screen flex flex-col justify-between"
+    class="flex flex-col gap-y-5"
   >
     <div class="flex flex-col gap-y-10">
       <section class="flex flex-col gap-y-3">
@@ -64,9 +64,9 @@ const handleSubmit = (): void => {
         />
       </div>
     </div>
-    <div class="w-full flex gap-x-3">
-      <PrevButton @handleClick="emit('prev-step')" />
-      <BaseButton msg="Continue" type="submit" />
-    </div>
   </form>
+  <div class="w-full flex gap-x-3 mt-auto">
+    <PrevButton @handleClick="emit('prev-step')" />
+    <BaseButton msg="Continue" type="submit" />
+  </div>
 </template>

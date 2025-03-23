@@ -125,7 +125,7 @@ const handleCrop = async (): Promise<void> => {
       hidden
     ></video>
     <div class="my-5">
-      <div class="relative w-full pb-[177.78%]">
+      <div class="relative w-full pb-[150%]">
         <div class="absolute inset-0 rounded-lg overflow-hidden">
           <canvas
             v-show="!hasCaptured"

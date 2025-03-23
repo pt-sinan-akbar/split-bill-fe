@@ -255,7 +255,7 @@ const clearActiveItemBill = (): void => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col justify-between">
+  <div class="flex flex-col justify-between">
     <div class="flex flex-col gap-y-10">
       <section class="flex flex-col gap-y-3">
         <BaseTitle className="text-center" tag="h5" msg="List of Items" />
@@ -287,26 +287,18 @@ const clearActiveItemBill = (): void => {
         </div>
       </section>
     </div>
-    <div class="w-full flex gap-x-3">
-      <PrevButton @handleClick="emit('prev-step')" />
-      <BaseButton
-        msg="Review Items"
-        type="button"
-        @handleClick="toogleReviewing"
-      />
-    </div>
     <!-- Review Items -->
     <!--
         TODO:
         * Add bill items based on the users have
         * Move this modal to separate component
     -->
-    <SliderModal :show-modal="isReviewing">
+    <SliderModal :showModal="isReviewing" v-if="isReviewing">
       <template v-slot:header>
         <BaseTitle tag="h5" msg="Review Items" />
       </template>
       <template v-slot:body>
-        <div class="flex gap-y-5 pb-5 items-center flex-col">
+        <div class="flex gap-y-5 pb-5 items-center flex-col h-80 overflow-y-scroll">
           <BaseAccordion
             v-for="(item, index) in assignTo"
             :key="item.id"
@@ -358,7 +350,7 @@ const clearActiveItemBill = (): void => {
         TODO:
         * Move this modal to separate component
     -->
-    <SliderModal :showModal="showEditItemModal">
+    <SliderModal :showModal="showEditItemModal" v-if="showEditItemModal">
       <template v-slot:header>
         <BaseTitle tag="h5" msg="Edit Item" class="w-full text-start" />
       </template>
@@ -400,7 +392,7 @@ const clearActiveItemBill = (): void => {
         FIX:
         * Swipe event still has bug
     -->
-    <SliderModal :showModal="showAssignModal">
+    <SliderModal :showModal="showAssignModal" v-if="showAssignModal">
       <template v-slot:header>
         <div class="flex flex-col gap-y-5">
           <BaseTitle class="text-center" tag="h5" msg="Assign Items" />
@@ -408,7 +400,7 @@ const clearActiveItemBill = (): void => {
         </div>
       </template>
       <template v-slot:body>
-        <div class="w-full flex gap-y-5 flex-col justify-start">
+        <div class="w-full flex gap-y-5 flex-col justify-start max-h-60 overflow-y-scroll">
           <div
             class="flex gap-x-5 border-b-2 pb-3 items-center"
             v-for="(item, index) in assignTo"
@@ -489,5 +481,13 @@ const clearActiveItemBill = (): void => {
         </div>
       </template>
     </SliderModal>
+  </div>
+  <div class="w-full flex gap-x-3 mt-auto">
+    <PrevButton @handleClick="emit('prev-step')" />
+    <BaseButton
+      msg="Review Items"
+      type="button"
+      @handleClick="toogleReviewing"
+    />
   </div>
 </template>

@@ -12,7 +12,7 @@ import BaseButton from '@/components/elements/BaseButton.vue'
     <BaseTitle tag="h3" msg="Save your time and money" className="pb-2" />
     <div class="flex flex-col gap-6 items-center">
       <BaseParagraph
-        msg="Only four steps to split bill and share to your friends. Split the bill not the friendship!"
+        msg="Only few steps to split bill and share to your friends. Split the bill not the friendship!"
       />
       <div class="flex gap-2">
         <div
@@ -22,7 +22,7 @@ import BaseButton from '@/components/elements/BaseButton.vue'
         <div class="rounded-full w-8 h-3 bg-gray-300" />
       </div>
     </div>
-    <RouterLink :to="{ name: 'add-split-bill' }">
+    <RouterLink :to="{ name: 'get-started' }">
       <BaseButton
         msg="Get Started"
         className="py-3 px-8 bg-primary-color rounded-3xl text-black"

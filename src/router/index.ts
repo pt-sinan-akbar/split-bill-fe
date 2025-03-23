@@ -10,6 +10,11 @@ const router = createRouter({
     },
     {
       path: '/start',
+      name: 'get-started',
+      component: () => import('../views/GetStartedView.vue'),
+    },
+    {
+      path: '/scan',
       name: 'add-split-bill',
       component: () => import('../components/BillProcess/Index.vue'),
     },

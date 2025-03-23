@@ -1,15 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    showModal: boolean
-  }>(),
-  {
-    showModal: false,
-  },
-)
-
 const panel = ref<HTMLElement | null>(null)
 const wrapper = ref<HTMLElement | null>(null)
 const header = ref<HTMLElement | null>(null)
@@ -28,24 +19,10 @@ onMounted(() => {
   const headerHeight = header.value.offsetHeight
   const bodyHeight = body.value.offsetHeight
   const footerHeight = footer.value.offsetHeight
-  const wrapperHeight = headerHeight + bodyHeight + footerHeight
-  panel.value.style.height = `${wrapperHeight * 2 + 60}px`
+  const wrapperHeight = (headerHeight + bodyHeight + footerHeight) * 1.5
+  panel.value.style.height = `${(wrapperHeight < (screen.height * 0.8) ? wrapperHeight : (screen.height * 0.8))}px`
+  panel.value.classList.add('open')
 })
-
-watch(
-  () => props.showModal,
-  newVal => {
-    console.log('showModal', newVal)
-    if (newVal) {
-      panel.value?.classList.add('open')
-      modalContainer.value.classList.add('open')
-    } else {
-      panel.value?.classList.remove('open')
-      modalContainer.value?.classList.remove('open')
-    }
-  },
-  { immediate: true },
-)
 
 const startDragging = e => {
   isDragging = true
@@ -97,7 +74,6 @@ const stopDragging = () => {
   background-color: rgba(0, 0, 0, 0.5);
   width: 100%;
   z-index: 5;
-  bottom: -100%;
 }
 
 .panel {
@@ -112,6 +88,8 @@ const stopDragging = () => {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   z-index: 10;
+  max-width: 768px;
+  margin-inline: auto;
 }
 
 .panel.open {
@@ -159,7 +137,7 @@ const stopDragging = () => {
 </style>
 
 <template>
-  <div class="modal-container" ref="modalContainer"></div>
+  <div class="modal-container open" ref="modalContainer"></div>
   <div ref="panel" class="panel">
     <div
       ref="header"
