@@ -75,7 +75,7 @@ const stopDragging = () => {
 
 <style scoped>
 .modal-container {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   height: 100%;
@@ -85,7 +85,7 @@ const stopDragging = () => {
 }
 
 .panel {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   bottom: -100vh;
