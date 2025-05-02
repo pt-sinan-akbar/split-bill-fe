@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import BaseButton from '../elements/BaseButton.vue'
-import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
-import BaseTitle from '../elements/Typography/BaseTitle.vue'
-import UrlButton from '../elements/Button/Variants/UrlButton.vue'
+import BaseButton from '@/components/elements/BaseButton.vue'
+import BaseParagraph from '@/components/elements/Typography/BaseParagraph.vue'
+import BaseTitle from '@/components/elements/Typography/BaseTitle.vue'
+import UrlButton from '@/components/elements/Button/Variants/UrlButton.vue'
 import { FwbImg } from 'flowbite-vue'
+import type { Bill } from '@/types/Bill'
 
-const emit = defineEmits<{
-  (e: 'next-step'): void
-  (e: 'prev-step'): void
+const props = defineProps<{
+  bill: Bill
 }>()
 
-const urlMsg = ref<string>('Default Url Link')
+const urlMsg = ref<string>('https://splitbill.dta32.my.id/s/' + props.bill.id)
 
 const copyUrl = (): void => {
   if (!urlMsg.value) return

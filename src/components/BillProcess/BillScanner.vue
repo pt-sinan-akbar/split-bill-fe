@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, type Ref } from 'vue'
 import BaseButton from '../elements/BaseButton.vue'
 import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import CropperContainer from '../Croppper/Index.vue'
 import BaseModal from '../elements/Modal/BaseModal.vue'
+import router from '@/router'
 
 const video = ref<HTMLVideoElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -16,15 +17,10 @@ const imgToCrop = ref<string | null>(null)
 const cropperRef = ref<InstanceType<typeof CropperContainer> | null>(null)
 const imgClass = ref<string>('w-full h-full object-cover border-0 ')
 
-const props = defineProps<{
-  width: number
-  height: number
-  padding: number
-}>()
-
-const emit = defineEmits<{
-  (e: 'next-step'): void
-}>()
+const currStep = inject('currStep') as Ref<number>
+const maxStep = inject('maxStep') as Ref<number>
+currStep.value = 1
+maxStep.value = 4
 
 const constraints = ref<Object>({
   audio: false,
@@ -106,6 +102,12 @@ const handleCrop = async (): Promise<void> => {
     console.log('Error cropping image:', error)
   }
 }
+
+const uploadBill = () => {
+  console.log('upload bill')
+  // POST request here
+  router.push({ name: 'bill-creator-id', params: { id: 'mock-scanned-bill' } })
+}
 </script>
 
 <template>
@@ -130,16 +132,16 @@ const handleCrop = async (): Promise<void> => {
           <canvas
             v-show="!hasCaptured"
             ref="canvas"
-            :width="width"
-            :height="height"
+            :width=100
+            :height=100
             :class="imgClass"
           >
           </canvas>
           <img
             v-show="hasCaptured"
             src="#"
-            :width="width"
-            :height="height"
+            :width=100
+            :height=100
             alt="image-preview"
             ref="img"
             :class="imgClass"
@@ -164,7 +166,7 @@ const handleCrop = async (): Promise<void> => {
         <BaseButton
           msg="Continue"
           type="button"
-          @handleClick="emit('next-step')"
+          @handleClick="uploadBill"
         />
       </div>
       <div class="flex flex-col gap-y-3" v-show="!hasCaptured">

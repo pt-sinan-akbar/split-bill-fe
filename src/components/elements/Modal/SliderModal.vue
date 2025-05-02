@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const props = withDefaults(
   defineProps<{
-    closeFromBackground: () => void
+    closeFromBackground?: () => void
   }>(),
   {
     closeFromBackground: () => {},

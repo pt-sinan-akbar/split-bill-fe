@@ -5,7 +5,7 @@ import {
   FwbTableCell,
   FwbTableHead,
   FwbTableHeadCell,
-  FwbTableRow,
+  FwbTableRow
 } from 'flowbite-vue'
 import { ref } from 'vue'
 
@@ -17,12 +17,14 @@ const props = withDefaults(
     withNumber: boolean
     hasEditAction?: boolean
     isEditable?: boolean
+    hideRowId?: boolean
   }>(),
   {
     withNumber: true,
     hasEditAction: false,
     isEditable: false,
-  },
+    hideRowId: false
+  }
 )
 
 const emit = defineEmits<{
@@ -41,7 +43,7 @@ const handleClick = (e: MouseEvent, data: Array<string>): void => {
 const handleWhenHolding = (
   _: MouseEvent,
   body: Array<string>,
-  rowIndex: number,
+  rowIndex: number
 ): void => {
   holdTimeout.value = setTimeout(() => {
     emit('handleHold', body, rowIndex)
@@ -51,7 +53,7 @@ const handleWhenHolding = (
 const handleEdit = (
   _: MouseEvent,
   data: Array<string>,
-  indexData: number,
+  indexData: number
 ): void => {
   emit('handleEdit', data, indexData)
 }
@@ -63,7 +65,7 @@ const handleWhenStopHolding = (): void => {
 
 <template>
   <fwb-table class="shadow-none text-start">
-    <fwb-table-head class="w-full">
+    <fwb-table-head v-if="header" class="w-full">
       <fwb-table-head-cell v-if="withNumber">No.</fwb-table-head-cell>
       <fwb-table-head-cell v-for="(item, index) in header" :key="index">
         {{ item }}
@@ -82,6 +84,7 @@ const handleWhenStopHolding = (): void => {
           v-for="(data, colIndex) in bd"
           :key="colIndex"
           :contenteditable="isEditable"
+          :class="{ 'hidden' : colIndex === 0 && hideRowId }"
         >
           {{ data }}
         </fwb-table-cell>

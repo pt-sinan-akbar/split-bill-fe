@@ -36,6 +36,7 @@ const props = defineProps<{
       </div>
       <PriceParagraph :price="member.priceOwe" className="text-xl" />
     </div>
+    <!--  TODO: pake BaseAccordion yang dibuat Lord Dimas  -->
     <fwb-accordion flush :open-first-item="false">
       <fwb-accordion-panel
         v-for="(item, index) in member.items"
