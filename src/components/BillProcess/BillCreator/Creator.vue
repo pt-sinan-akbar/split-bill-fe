@@ -35,6 +35,18 @@ const currentSelectedItem = ref<BillItem>({
   service: 0,
   subtotal: 0
 })
+const currentSelectedItemSplitMode = ref<'person' | 'equal'>('person')
+
+const newItem = ref<BillItem>({
+  id: 0,
+  name: '',
+  discount: 0,
+  price: 0,
+  qty: 0,
+  tax: 0,
+  service: 0,
+  subtotal: 0
+})
 
 const body = computed<Array<Array<string>>>(() => {
   return props.bill.items.map(item => [
@@ -46,6 +58,7 @@ const body = computed<Array<Array<string>>>(() => {
 
 const showAssignModal = ref<boolean>(false)
 const showEditItemModal = ref<boolean>(false)
+const showAddItemModal = ref<boolean>(false)
 
 const addNewUser = (): void => {
   // request from BE for new member with empty name, then push to props
@@ -106,14 +119,23 @@ const handleClickBillItem = (data: Array<string>): void => {
   const id = parseInt(data[0])
   // deep copy to prevent edit auto-change props value, may be removed if we can figure out how to revert if request fail
   currentSelectedItem.value = { ...props.bill.items.find(item => item.id === id) } as BillItem
+  // item is split equally if there's BillItemMember with null qty
+  if (props.bill.items_members.some(itemMember => itemMember.item_id === id && itemMember.qty === null)) {
+    currentSelectedItemSplitMode.value = 'equal'
+  } else {
+    currentSelectedItemSplitMode.value = 'person'
+  }
   toogleShowModal()
 }
 const toogleShowEditItemModal = () =>
   (showEditItemModal.value = !showEditItemModal.value)
 
+const toggleShowAddItemModal = () =>
+  (showAddItemModal.value = !showAddItemModal.value)
+
 const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
   const itemMember: BillItemMember | undefined = getItemMember(member.id, currentSelectedItem.value.id)
-  if (itemMember) {
+  if (itemMember && itemMember.qty !== null) {
     if (operation === 'add') {
       // request first, then update props if success
       itemMember.qty++
@@ -128,7 +150,7 @@ const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
 }
 
 const handleSelectUser = (user: BillMember): void => {
-  if (!isMemberHasThisItem(user.id, currentSelectedItem.value.id)) {
+  if (currentSelectedItemSplitMode.value === 'person' && !isMemberHasThisItem(user.id, currentSelectedItem.value.id)) {
     const newItemMember: BillItemMember = {
       id: props.bill.items_members.length + 1,
       item_id: currentSelectedItem.value.id,
@@ -136,6 +158,20 @@ const handleSelectUser = (user: BillMember): void => {
       qty: 1
     }
     props.bill.items_members.push(newItemMember)
+  }
+  else if (currentSelectedItemSplitMode.value === 'equal') {
+    const itemMember: BillItemMember | undefined = getItemMember(user.id, currentSelectedItem.value.id)
+    if (itemMember) {
+      props.bill.items_members = props.bill.items_members.filter(im => im.id !== itemMember.id)
+    } else {
+      const newItemMember: BillItemMember = {
+        id: props.bill.items_members.length + 1,
+        item_id: currentSelectedItem.value.id,
+        member_id: user.id,
+        qty: null
+      }
+      props.bill.items_members.push(newItemMember)
+    }
   }
 }
 
@@ -154,6 +190,7 @@ const clearActiveItemBill = (): void => {
     service: 0,
     subtotal: 0
   }
+  currentSelectedItemSplitMode.value = 'person'
 }
 
 const getItemMember = (member_id: number, item_id: number): BillItemMember | undefined => {
@@ -166,13 +203,66 @@ const isMemberHasThisItem = (member_id: number, item_id: number): boolean => {
   return getItemMember(member_id, item_id) !== undefined
 }
 
-const getItemQtyForThisMember = (member_id: number, item_id: number): number => {
-  return getItemMember(member_id, item_id)?.qty || 0
+const getItemQtyForThisMember = (member_id: number, item_id: number): number | null => {
+  const itemMember = getItemMember(member_id, item_id)
+  if (itemMember) {
+    return itemMember.qty
+  }
+  return null
 }
 
 const handleConfirmation = (): void => {
   console.log('props.bill: ', props.bill)
   internalProgress.value = InternalProgress.CONTACT
+}
+
+const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
+  if (mode === currentSelectedItemSplitMode.value) {
+    return
+  }
+  currentSelectedItemSplitMode.value = mode
+  if (mode === 'equal') {
+    // set all item member qty to null
+    props.bill.items_members.forEach(itemMember => {
+      if (itemMember.item_id === currentSelectedItem.value.id) {
+        itemMember.qty = null
+      }
+    })
+  } else {
+    // set all item member qty to 1
+    props.bill.items_members.forEach(itemMember => {
+      if (itemMember.item_id === currentSelectedItem.value.id) {
+        itemMember.qty = 1
+      }
+    })
+  }
+}
+
+const handleAddItem = (): void => {
+  // request first, then update props.bill if success
+  const newItemData: BillItem = {
+    id: props.bill.items.length + 1,
+    name: newItem.value.name,
+    discount: newItem.value.discount,
+    price: newItem.value.price,
+    qty: newItem.value.qty,
+    tax: newItem.value.tax,
+    service: newItem.value.service,
+    subtotal: newItem.value.subtotal
+  }
+  props.bill.items.push(newItemData)
+  toggleShowAddItemModal()
+  // clear new item data
+  newItem.value = {
+    id: 0,
+    name: '',
+    discount: 0,
+    price: 0,
+    qty: 0,
+    tax: 0,
+    service: 0,
+    subtotal: 0
+  }
 }
 
 </script>
@@ -189,12 +279,20 @@ const handleConfirmation = (): void => {
       </section>
       <section class="flex flex-col gap-y-5">
         <BaseTitle className="text-center" tag="h6" :msg="props.bill.name" />
-        <BaseTable
-          :withNumber="false"
-          :body="body"
-          @handle-click="handleClickBillItem"
-          :hide-row-id="true"
-        />
+        <div class="flex flex-col gap-y-3">
+          <BaseTable
+            :withNumber="false"
+            :body="body"
+            @handle-click="handleClickBillItem"
+            :hide-row-id="true"
+          />
+          <BaseButton
+            msg="Add Item"
+            type="button"
+            @handle-click="toggleShowAddItemModal"
+            :outline="true"
+          />
+        </div>
         <!--   TODO: Tax and Service auto-change ref value or use separate handler on change    -->
         <!--   TODO TLDR: value disini belum ngubah value di props.bill            -->
         <div class="flex justify-between mt-5">
@@ -240,9 +338,10 @@ const handleConfirmation = (): void => {
                           )"
                   :key="item.id"
                 >
-                  {{ item.name }} x{{
-                    getItemQtyForThisMember(member.id, item.id)
-                  }}
+                  <span>{{ item.name }}</span>
+                  <span v-if="getItemQtyForThisMember(member.id, item.id) !== null">
+                    x{{ getItemQtyForThisMember(member.id, item.id) }}
+                  </span>
                 </li>
               </ol>
             </template>
@@ -327,12 +426,28 @@ const handleConfirmation = (): void => {
         </div>
       </template>
       <template v-slot:body>
-        <div class="w-full flex gap-y-5 flex-col justify-start max-h-60 overflow-y-scroll">
+        <div class="w-full flex space-x-5 items-center justify-around my-5 text-nowrap">
+          <BaseButton
+            :outline="currentSelectedItemSplitMode === 'equal'"
+            msg="Split per person"
+            @handle-click="handleSplitModeChanges('person')"
+          />
+          <BaseParagraph msg="or" />
+          <BaseButton
+            :outline="currentSelectedItemSplitMode === 'person'"
+            msg="Split equally"
+            @handle-click="handleSplitModeChanges('equal')"
+          />
+        </div>
+        <div class="w-full flex flex-col justify-start max-h-60 overflow-y-scroll">
           <div
-            class="flex gap-x-5 border-b-2 pb-3 items-center"
             v-for="(member, index) in props.bill.members"
             :key="member.id"
             :ref="el => (userContainerList[index] = el)"
+            :class="[
+              'flex gap-x-5 border-b-2 p-3 items-center',
+              (isMemberHasThisItem(member.id, currentSelectedItem.id)) ? 'bg-yellow-100' : 'bg-white'
+            ]"
           >
             <div class="w-fit">
               <InitialAvatar :name="member.name" />
@@ -344,14 +459,15 @@ const handleConfirmation = (): void => {
               <!--    TODO: member name auto-change ref value or use separate handler on change     -->
               <!--    TODO TLDR: value disini belum ngubah value di props.bill            -->
               <BaseParagraph :contenteditable="true" :msg="member.name" />
-              <div class="flex gap-x-3 items-center" v-if="isMemberHasThisItem(member.id, currentSelectedItem.id)">
+              <div class="flex gap-x-3 items-center"
+                   v-if="isMemberHasThisItem(member.id, currentSelectedItem.id) && currentSelectedItemSplitMode === 'person'">
                 <BaseButton
                   :outline="true"
                   msg="-"
                   @handle-click="changeQuantity(member, 'sub')"
                 />
                 <BaseParagraph
-                  :msg="getItemQtyForThisMember(member.id, currentSelectedItem.id).toString()"
+                  :msg="getItemQtyForThisMember(member.id, currentSelectedItem.id)?.toString() || '0'"
                 />
                 <BaseButton
                   :outline="true"
@@ -387,6 +503,48 @@ const handleConfirmation = (): void => {
             type="button"
             @handleClick="handleSubmitAssignItem"
           />
+        </div>
+      </template>
+    </SliderModal>
+    <!-- Add Item -->
+    <!--
+        TODO:
+        * Move this modal to separate component
+    -->
+    <SliderModal v-if="showAddItemModal">
+      <template v-slot:header>
+        <div class="flex">
+          <BaseTitle tag="h5" msg="Add Item" class="w-full text-start" />
+        </div>
+      </template>
+      <template v-slot:body>
+        <div class="flex flex-col gap-y-5">
+          <BaseInput
+            v-model:model-value="newItem.name"
+            placeholder="Item Name"
+            label="Item Name"
+            type="text"
+          />
+          <div class="flex justify-between gap-x-5">
+            <BaseInput
+              v-model:model-value="newItem.price"
+              placeholder="Price"
+              label="Price"
+              type="number"
+            />
+            <BaseInput
+              v-model:model-value="newItem.qty"
+              placeholder="Quantity"
+              label="Quantity"
+              type="number"
+            />
+          </div>
+        </div>
+      </template>
+      <template v-slot:fotoer>
+        <div class="flex justify-between gap-x-3 mt-5 sticky top-0">
+          <PrevButton @handleClick="toggleShowAddItemModal" />
+          <BaseButton msg="Done" type="button" @handle-click="handleAddItem" />
         </div>
       </template>
     </SliderModal>

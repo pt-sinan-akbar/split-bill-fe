@@ -40,7 +40,7 @@ export interface BillItemMember {
   id: number,
   item_id: number,
   member_id: number,
-  qty: number,
+  qty: number | null,
 }
 
 export interface BillOwner {
