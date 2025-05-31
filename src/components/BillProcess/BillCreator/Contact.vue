@@ -15,24 +15,24 @@ const props = defineProps<{
 const billOwner = ref<BillOwner>({
   name: '',
   contact: '',
-  pay_to: '',
+  bank_account: '',
 })
-if (props.bill.owner !== null) {
-  billOwner.value = props.bill.owner
+if (props.bill.bill_owner !== null) {
+  billOwner.value = props.bill.bill_owner
 }
 const internalProgress = inject('internalProgress') as Ref<InternalProgress>
 
 const handleSubmit = (): void => {
   // TODO: validate data input
   console.log('submitted data: ', billOwner.value)
-  props.bill.owner = billOwner.value
+  props.bill.bill_owner = billOwner.value
   internalProgress.value = InternalProgress.SHARE
 }
 
 const handleBack = (): void => {
   console.log('return to creator: ', billOwner.value)
   // save as draft
-  props.bill.owner = billOwner.value
+  props.bill.bill_owner = billOwner.value
   internalProgress.value = InternalProgress.CREATOR
 }
 
@@ -64,7 +64,7 @@ const handleBack = (): void => {
           type="text"
         />
         <BaseInput
-          v-model:model-value="billOwner.pay_to"
+          v-model:model-value="billOwner.bank_account"
           placeholder="Pay to"
           label="Pay To"
           type="text"

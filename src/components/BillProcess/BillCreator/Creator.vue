@@ -9,7 +9,7 @@ import PrevButton from '@/components/elements/Button/Variants/PrevButton.vue'
 import InitialAvatar from '@/components/elements/InitialAvatar.vue'
 import BaseInput from '@/components/elements/BaseInput.vue'
 import BaseAccordion from '@/components/elements/BaseAccordion.vue'
-import type { Bill, BillItem, BillItemMember, BillMember } from '@/types/Bill'
+import type { Bill, BillItem, BillMemberItem, BillMember } from '@/types/Bill'
 import router from '@/router'
 import { InternalProgress } from '@/types/BillCreatorInternalProgress'
 
@@ -27,30 +27,33 @@ const internalProgress = inject('internalProgress') as Ref<InternalProgress>
 
 const currentSelectedItem = ref<BillItem>({
   id: 0,
+  bill_id: '',
   name: '',
   discount: 0,
   price: 0,
   qty: 0,
   tax: 0,
   service: 0,
-  subtotal: 0
+  subtotal: 0,
+  created_at: '',
+  updated_at: ''
 })
 const currentSelectedItemSplitMode = ref<'person' | 'equal'>('person')
 
 const newItem = ref<BillItem>({
-  id: 0,
+  bill_id: '',
   name: '',
   discount: 0,
   price: 0,
   qty: 0,
   tax: 0,
   service: 0,
-  subtotal: 0
+  subtotal: 0,
 })
 
 const body = computed<Array<Array<string>>>(() => {
-  return props.bill.items.map(item => [
-    item.id.toString(),
+  return props.bill.bill_item.map(item => [
+    (item.id ?? 0).toString(),
     item.name,
     item.price.toString()
   ])
@@ -62,9 +65,11 @@ const showAddItemModal = ref<boolean>(false)
 
 const addNewUser = (): void => {
   // request from BE for new member with empty name, then push to props
-  props.bill.members.push({
-    id: props.bill.members.length + 1,
-    name: 'New User'
+  props.bill.bill_member.push({
+    id: props.bill.bill_member.length + 1,
+    bill_id: props.bill.id,
+    name: 'New User',
+    price_owe: null
   })
 }
 
@@ -72,7 +77,7 @@ const checkDirection = (id: number): void => {
   const isSwipeLeft = touchEndX.value < touchStartX.value
   if (isSwipeLeft) {
     // delete user, request first then update props.bill if success
-    props.bill.members = props.bill.members.filter(user => user.id !== id)
+    props.bill.bill_member = props.bill.bill_member.filter(user => user.id !== id)
   }
 }
 
@@ -97,13 +102,13 @@ const handleDeleteItem = (): void => {
   const id = currentSelectedItem.value.id
   // request first, then update props.bill if success
   clearActiveItemBill()
-  props.bill.items = props.bill.items.filter(item => item.id !== id)
+  props.bill.bill_item = props.bill.bill_item.filter(item => item.id !== id)
   toogleShowEditItemModal()
 }
 
 const editItemBill = (): void => {
   // set to props if request success
-  const item = props.bill.items.find(item2 => item2.id === currentSelectedItem.value.id)
+  const item = props.bill.bill_item.find(item2 => item2.id === currentSelectedItem.value.id)
   if (item) {
     item.name = currentSelectedItem.value.name
     item.price = currentSelectedItem.value.price
@@ -118,9 +123,9 @@ const toogleReviewing = () => (isReviewing.value = !isReviewing.value)
 const handleClickBillItem = (data: Array<string>): void => {
   const id = parseInt(data[0])
   // deep copy to prevent edit auto-change props value, may be removed if we can figure out how to revert if request fail
-  currentSelectedItem.value = { ...props.bill.items.find(item => item.id === id) } as BillItem
-  // item is split equally if there's BillItemMember with null qty
-  if (props.bill.items_members.some(itemMember => itemMember.item_id === id && itemMember.qty === null)) {
+  currentSelectedItem.value = { ...props.bill.bill_item.find(item => item.id === id) } as BillItem
+  // item is split equally if there's BillMemberItem with null qty
+  if (props.bill.bill_member_item.some(memberItems => memberItems.bill_item_id === id && memberItems.qty === null)) {
     currentSelectedItemSplitMode.value = 'equal'
   } else {
     currentSelectedItemSplitMode.value = 'person'
@@ -134,16 +139,16 @@ const toggleShowAddItemModal = () =>
   (showAddItemModal.value = !showAddItemModal.value)
 
 const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
-  const itemMember: BillItemMember | undefined = getItemMember(member.id, currentSelectedItem.value.id)
-  if (itemMember && itemMember.qty !== null) {
+  const memberItem: BillMemberItem | undefined = getMemberItem(member.id, currentSelectedItem.value.id)
+  if (memberItem && memberItem.qty !== null) {
     if (operation === 'add') {
       // request first, then update props if success
-      itemMember.qty++
+      memberItem.qty++
     } else if (operation === 'sub') {
-      if (itemMember.qty === 1) {
-        props.bill.items_members = props.bill.items_members.filter(im => im.id !== itemMember.id)
+      if (memberItem.qty === 1) {
+        props.bill.bill_member_item = props.bill.bill_member_item.filter(im => im.bill_member_id !== memberItem.bill_member_id && im.bill_item_id !== memberItem.bill_item_id)
       } else {
-        itemMember.qty--
+        memberItem.qty--
       }
     }
   }
@@ -151,26 +156,28 @@ const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
 
 const handleSelectUser = (user: BillMember): void => {
   if (currentSelectedItemSplitMode.value === 'person' && !isMemberHasThisItem(user.id, currentSelectedItem.value.id)) {
-    const newItemMember: BillItemMember = {
-      id: props.bill.items_members.length + 1,
-      item_id: currentSelectedItem.value.id,
-      member_id: user.id,
+    const newMemberItem: BillMemberItem = {
+      bill_id: props.bill.id,
+      bill_item_id: currentSelectedItem.value.id ?? 0,
+      bill_member_id: user.id ?? 0,
       qty: 1
     }
-    props.bill.items_members.push(newItemMember)
-  }
-  else if (currentSelectedItemSplitMode.value === 'equal') {
-    const itemMember: BillItemMember | undefined = getItemMember(user.id, currentSelectedItem.value.id)
-    if (itemMember) {
-      props.bill.items_members = props.bill.items_members.filter(im => im.id !== itemMember.id)
+    // request first, then update props.bill if success
+    props.bill.bill_member_item.push(newMemberItem)
+  } else if (currentSelectedItemSplitMode.value === 'equal') {
+    const memberItems: BillMemberItem | undefined = getMemberItem(user.id, currentSelectedItem.value.id)
+    if (memberItems) {
+      // request first, then update props.bill if success
+      props.bill.bill_member_item = props.bill.bill_member_item.filter(im => im.bill_member_id !== memberItems.bill_member_id && im.bill_item_id !== memberItems.bill_item_id)
     } else {
-      const newItemMember: BillItemMember = {
-        id: props.bill.items_members.length + 1,
-        item_id: currentSelectedItem.value.id,
-        member_id: user.id,
+      const newMemberItem: BillMemberItem = {
+        bill_id: props.bill.id,
+        bill_item_id: currentSelectedItem.value.id ?? 0,
+        bill_member_id: user.id ?? 0,
         qty: null
       }
-      props.bill.items_members.push(newItemMember)
+      // request first, then update props.bill if success
+      props.bill.bill_member_item.push(newMemberItem)
     }
   }
 }
@@ -182,31 +189,43 @@ const handleSubmitAssignItem = (): void => {
 const clearActiveItemBill = (): void => {
   currentSelectedItem.value = {
     id: 0,
+    bill_id: '',
     name: '',
     discount: 0,
     price: 0,
     qty: 0,
     tax: 0,
     service: 0,
-    subtotal: 0
+    subtotal: 0,
+    created_at: '',
+    updated_at: ''
   }
   currentSelectedItemSplitMode.value = 'person'
 }
 
-const getItemMember = (member_id: number, item_id: number): BillItemMember | undefined => {
-  return props.bill.items_members.find(
-    itemMember => itemMember.item_id === item_id && itemMember.member_id === member_id
+const getMemberItem = (member_id: number | undefined, item_id: number | undefined): BillMemberItem | undefined => {
+  if (member_id === undefined || item_id === undefined) {
+    return undefined
+  }
+  return props.bill.bill_member_item.find(
+    memberItem => memberItem.bill_item_id === item_id && memberItem.bill_member_id === member_id
   )
 }
 
-const isMemberHasThisItem = (member_id: number, item_id: number): boolean => {
-  return getItemMember(member_id, item_id) !== undefined
+const isMemberHasThisItem = (member_id: number | undefined, item_id: number | undefined): boolean => {
+  if (member_id === undefined || item_id === undefined) {
+    return false
+  }
+  return getMemberItem(member_id, item_id) !== undefined
 }
 
-const getItemQtyForThisMember = (member_id: number, item_id: number): number | null => {
-  const itemMember = getItemMember(member_id, item_id)
-  if (itemMember) {
-    return itemMember.qty
+const getItemQtyForThisMember = (member_id: number | undefined, item_id: number | undefined): number | null => {
+  if (member_id === undefined || item_id === undefined) {
+    return null
+  }
+  const memberItem = getMemberItem(member_id, item_id)
+  if (memberItem) {
+    return memberItem.qty
   }
   return null
 }
@@ -223,16 +242,16 @@ const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
   currentSelectedItemSplitMode.value = mode
   if (mode === 'equal') {
     // set all item member qty to null
-    props.bill.items_members.forEach(itemMember => {
-      if (itemMember.item_id === currentSelectedItem.value.id) {
-        itemMember.qty = null
+    props.bill.bill_member_item.forEach(memberItem => {
+      if (memberItem.bill_item_id === currentSelectedItem.value.id) {
+        memberItem.qty = null
       }
     })
   } else {
     // set all item member qty to 1
-    props.bill.items_members.forEach(itemMember => {
-      if (itemMember.item_id === currentSelectedItem.value.id) {
-        itemMember.qty = 1
+    props.bill.bill_member_item.forEach(memberItem => {
+      if (memberItem.bill_item_id === currentSelectedItem.value.id) {
+        memberItem.qty = 1
       }
     })
   }
@@ -241,27 +260,33 @@ const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
 const handleAddItem = (): void => {
   // request first, then update props.bill if success
   const newItemData: BillItem = {
-    id: props.bill.items.length + 1,
+    id: props.bill.bill_item.length + 1,
+    bill_id: props.bill.id,
     name: newItem.value.name,
     discount: newItem.value.discount,
     price: newItem.value.price,
     qty: newItem.value.qty,
     tax: newItem.value.tax,
     service: newItem.value.service,
-    subtotal: newItem.value.subtotal
+    subtotal: newItem.value.subtotal,
+    created_at: '',
+    updated_at: ''
   }
-  props.bill.items.push(newItemData)
+  props.bill.bill_item.push(newItemData)
   toggleShowAddItemModal()
   // clear new item data
   newItem.value = {
     id: 0,
+    bill_id: '',
     name: '',
     discount: 0,
     price: 0,
     qty: 0,
     tax: 0,
     service: 0,
-    subtotal: 0
+    subtotal: 0,
+    created_at: '',
+    updated_at: ''
   }
 }
 
@@ -297,15 +322,15 @@ const handleAddItem = (): void => {
         <!--   TODO TLDR: value disini belum ngubah value di props.bill            -->
         <div class="flex justify-between mt-5">
           <BaseParagraph msg="Tax" />
-          <BaseParagraph :contenteditable="true" :msg="props.bill.data.tax.toString()" />
+          <BaseParagraph :contenteditable="true" :msg="props.bill.bill_data.tax.toString()" />
         </div>
         <div class="flex justify-between">
           <BaseParagraph msg="Service" />
-          <BaseParagraph :contenteditable="true" :msg="props.bill.data.service.toString()" />
+          <BaseParagraph :contenteditable="true" :msg="props.bill.bill_data.service.toString()" />
         </div>
         <div class="flex justify-between mt-5">
           <BaseParagraph className="font-semibold" msg="Total" />
-          <BaseParagraph :msg="props.bill.data.total.toString()" />
+          <BaseParagraph :msg="props.bill.bill_data.total.toString()" />
         </div>
       </section>
     </div>
@@ -321,7 +346,7 @@ const handleAddItem = (): void => {
       <template v-slot:body>
         <div class="flex gap-y-5 pb-5 items-center flex-col h-80 overflow-y-scroll">
           <BaseAccordion
-            v-for="member in props.bill.members"
+            v-for="member in props.bill.bill_member"
             :key="member.id"
           >
             <template v-slot:title>
@@ -333,7 +358,7 @@ const handleAddItem = (): void => {
             <template v-slot:body>
               <ol>
                 <li
-                  v-for="item in props.bill.items.filter((item2) =>
+                  v-for="item in props.bill.bill_item.filter((item2) =>
                             isMemberHasThisItem(member.id, item2.id)
                           )"
                   :key="item.id"
@@ -441,7 +466,7 @@ const handleAddItem = (): void => {
         </div>
         <div class="w-full flex flex-col justify-start max-h-60 overflow-y-scroll">
           <div
-            v-for="(member, index) in props.bill.members"
+            v-for="(member, index) in props.bill.bill_member"
             :key="member.id"
             :ref="el => (userContainerList[index] = el)"
             :class="[

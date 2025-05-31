@@ -6,104 +6,57 @@ import { InternalProgress } from '@/types/BillCreatorInternalProgress'
 import Creator from '@/components/BillProcess/BillCreator/Creator.vue'
 import Contact from '@/components/BillProcess/BillCreator/Contact.vue'
 import Share from '@/components/BillProcess/BillCreator/Share.vue'
+import { useRoute } from 'vue-router'
+import axios from 'axios'
 
-const mockData = ref<Bill>({
-  id: '1',
-  name: 'Cove at Batavia PIK (where Abdul drinks)',
-  raw_image: null,
-  data: {
-    id: 1,
-    store_name: 'Cove at Batavia PIK',
-    discount: 0,
-    misc: '',
-    service: 21000,
-    tax: 42000,
-    sub_total: 420000,
-    total: 483000
-  },
-  items: [
-    {
-      id: 1,
-      name: 'Bintang Radler',
-      discount: 0,
-      price: 50000,
-      qty: 1,
-      tax: 5000,
-      service: 2500,
-      subtotal: 50000
-    },
-    {
-      id: 2,
-      name: 'Shrimp Platter (with Pork Oil)',
-      discount: 0,
-      price: 100000,
-      qty: 1,
-      tax: 10000,
-      service: 5000,
-      subtotal: 100000
-    },
-    {
-      id: 3,
-      name: 'Gyukaku',
-      discount: 0,
-      price: 270000,
-      qty: 1,
-      tax: 27000,
-      service: 13500,
-      subtotal: 270000
+const route = useRoute();
+const billId = route.params.id as string;
+
+const loading = ref<boolean>(true)
+const data = ref<Bill | null>(null)
+const error = ref<string | null>(null)
+
+// TODO: move this to a separate file for API calls
+const useBill = async (id: string): Promise<Bill> => {
+  try {
+    const response = await axios.get(`/api/v1/bills/${id}`)
+    if(response.status !== 200){
+      throw new Error('Error')
     }
-  ],
-  members: [
-    {
-      id: 1,
-      name: 'Abdul'
-    },
-    {
-      id: 2,
-      name: 'Zakwir'
-    },
-    {
-      id: 3,
-      name: 'Mus Musculus'
+    return response.data as Bill
+  } catch (error) {
+    console.error('Error fetching bill:', error)
+    throw new Error('Failed to fetch bill data')
+  }
+}
+
+async function fetchData(id: string) {
+  try {
+    loading.value = true
+    data.value = await useBill(id)
+    error.value = null
+    if (data.value.raw_image) {
+      currStep.value = 2
+      maxStep.value = 4
+    } else {
+      currStep.value = 1
+      maxStep.value = 3
     }
-  ],
-  items_members: [
-    {
-      id: 1,
-      item_id: 1,
-      member_id: 1,
-      qty: 1
-    },
-    {
-      id: 1,
-      item_id: 2,
-      member_id: 2,
-      qty: 1
-    },
-    {
-      id: 1,
-      item_id: 3,
-      member_id: 3,
-      qty: 1
-    }
-  ],
-  owner: null
-})
+  } catch (err) {
+    console.error('Error fetching bill:', err)
+    error.value = 'Failed to fetch bill data'
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(() => billId, fetchData, { immediate: true })
 
 const internalProgress = ref<InternalProgress>(InternalProgress.CREATOR)
 provide('internalProgress', internalProgress)
 
 const currStep = inject('currStep') as Ref<number>
 const maxStep = inject('maxStep') as Ref<number>
-
-// put this on fetch, also add currStep
-if (mockData.value.raw_image) {
-  currStep.value = 2
-  maxStep.value = 4
-} else {
-  currStep.value = 1
-  maxStep.value = 3
-}
 
 watch(internalProgress, (newVal) => {
   if (newVal === InternalProgress.CREATOR) {
@@ -118,9 +71,13 @@ watch(internalProgress, (newVal) => {
 </script>
 
 <template>
-  <Creator :bill="mockData" v-if="internalProgress === InternalProgress.CREATOR" />
-  <Contact :bill="mockData" v-if="internalProgress === InternalProgress.CONTACT" />
-  <Share :bill="mockData" v-if="internalProgress === InternalProgress.SHARE" />
+  <div v-if="loading" class="flex-1 text-2xl place-content-center"><p>Loading...</p></div>
+  <div v-if="error" class="flex-1 text-2xl place-content-center"><p>{{ error }}</p></div>
+  <template v-if="data">
+    <Creator :bill="data" v-if="internalProgress === InternalProgress.CREATOR" />
+    <Contact :bill="data" v-if="internalProgress === InternalProgress.CONTACT" />
+    <Share :bill="data" v-if="internalProgress === InternalProgress.SHARE" />
+  </template>
 </template>
 
 <style scoped>
