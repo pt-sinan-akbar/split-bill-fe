@@ -9,6 +9,9 @@ import type { Ref } from 'vue'
 import SliderModal from '@/components/elements/Modal/SliderModal.vue'
 import BaseInput from '@/components/elements/BaseInput.vue'
 import router from '@/router'
+import type { Bill } from '@/types/Bill'
+import axios from 'axios'
+import BaseSpinner from '@/components/elements/BaseSpinner.vue'
 
 interface DraftBill {
   id: string
@@ -33,11 +36,36 @@ const draftBills = ref<DraftBill[]>([
   },
 ])
 const manualBillName = ref<string>('')
+const createManualLoading = ref<boolean>(false)
+const createManualError = ref<string | null>(null)
 
-const createManualBill = () => {
+// TODO: move this to a separate file for API calls
+const createBill = async (name: string): Promise<Bill> => {
+  try {
+    const response = await axios.post(`/api/v1/bills`, { name })
+    if(response.status !== 201){
+      throw new Error("Status Code: " + response.status)
+    }
+    return response.data as Bill
+  } catch (error) {
+    console.error('Error fetching bill:', error)
+    throw new Error('API Call Failed: ' + (error instanceof Error ? error.message : 'Unknown Error'))
+  }
+}
+
+const createManualBill = async () => {
   console.log('create manual bill with name: ', manualBillName.value)
-  // POST request here
-  router.push({ name: 'bill-creator-id', params: { id: manualBillName.value } })
+  try {
+    createManualLoading.value = true
+    const responseData : Bill = await createBill(manualBillName.value)
+    const billId : string = responseData.id
+    await router.push({ name: 'bill-creator-id', params: { id: billId } })
+  } catch (err) {
+    console.error('Error creating bill:', err)
+    createManualError.value = 'Failed to create bill, please try again or wait for a moment'
+  } finally {
+    createManualLoading.value = false
+  }
 }
 </script>
 
@@ -108,13 +136,19 @@ const createManualBill = () => {
       <BaseTitle tag="h5" msg="What will this bill called?" />
     </template>
     <template v-slot:body>
-      <div class="flex gap-y-5 pb-5 items-center flex-col">
-        <BaseInput
-          v-model:model-value="manualBillName"
-          placeholder=""
-          label="Name"
-          type="text"
-        />
+      <div v-if="createManualLoading" class="absolute top-0 left-0 bg-gray-500/50 w-full h-full z-10 flex flex-col place-content-center">
+        <BaseSpinner class="place-self-center"/>
+      </div>
+      <div class="relative flex gap-y-5 pb-5 items-center flex-col">
+        <div class="flex-col w-full">
+          <BaseInput
+            v-model:model-value="manualBillName"
+            placeholder=""
+            label="Name"
+            type="text"
+          />
+          <BaseParagraph :msg="`Error: ${createManualError}`" v-if="createManualError" className="text-red-700"/>
+        </div>
         <div class="flex flex-col text-sm">
           <BaseParagraph className="text-gray-700" msg="Tip:"/>
           <BaseParagraph className="text-gray-700" msg="Perhaps restaurant name alongside with memorable
@@ -126,6 +160,7 @@ const createManualBill = () => {
       <BaseButton
         msg="Continue"
         type="button"
+        :is-disabled="createManualLoading"
         @handleClick="createManualBill"
       />
     </template>

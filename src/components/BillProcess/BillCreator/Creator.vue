@@ -155,6 +155,8 @@ const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
 }
 
 const handleSelectUser = (user: BillMember): void => {
+  // TODO: user bakal banyak edit disini, kayaknya terlalu banyak network call kalo satu per satu,
+  //       harusnya bisa di batch update pake temporary ref
   if (currentSelectedItemSplitMode.value === 'person' && !isMemberHasThisItem(user.id, currentSelectedItem.value.id)) {
     const newMemberItem: BillMemberItem = {
       bill_id: props.bill.id,
