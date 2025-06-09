@@ -14,10 +14,6 @@ import router from '@/router'
 import { InternalProgress } from '@/types/BillCreatorInternalProgress'
 import axios from 'axios'
 
-const props = defineProps<{
-  bill: Bill
-}>()
-
 const userContainerList = ref<Array<any>>([])
 const touchStartX = ref<number>(0)
 const touchEndX = ref<number>(0)
@@ -34,6 +30,7 @@ const editableMemberIds = ref<Set<number>>(new Set())
 const isUserSwiping = ref<boolean>(false)
 const swipeOffset = ref<Map<number, number>>(new Map())
 const showDeleteBackground = ref<Set<number>>(new Set())
+const bill = inject('bill') as Ref<Bill>
 
 const currentSelectedItem = ref<BillItem>({
   id: 0,
@@ -58,7 +55,7 @@ const newItem = ref({
 })
 
 const body = computed<Array<Array<string>>>(() => {
-  return props.bill.bill_item.map(item => [
+  return bill.value.bill_item.map(item => [
     (item.id ?? 0).toString(),
     item.name,
     item.subtotal.toString()
@@ -72,9 +69,9 @@ const showAddItemModal = ref<boolean>(false)
 const addNewUser = ($event: Event): void => {
   const newMemberName = ($event.target as HTMLInputElement).value.trim()
   // request from BE for new member with empty name, then push to props
-  props.bill.bill_member.push({
-    id: props.bill.bill_member.length + 1,
-    bill_id: props.bill.id,
+  bill.value.bill_member.push({
+    id: bill.value.bill_member.length + 1,
+    bill_id: bill.value.id,
     name: newMemberName,
     price_owe: null
   })
@@ -86,24 +83,44 @@ const handleEditItem = (): void => {
   toogleShowEditItemModal()
 }
 
-const handleDeleteItem = (): void => {
-  const id = currentSelectedItem.value.id
-  // request first, then update props.bill if success
-  clearActiveItemBill()
-  props.bill.bill_item = props.bill.bill_item.filter(item => item.id !== id)
-  toogleShowEditItemModal()
+const handleDeleteItem = async (): Promise<void> => {
+  const billId = bill.value.id
+  const itemId = currentSelectedItem.value.id
+  try {
+    const updatedBillResponse = await axios.delete(`/api/v1/bills/dynamic/${billId}/item/${itemId}`)
+    if (updatedBillResponse.status !== 200) {
+      throw new Error('Failed to update item')
+    }
+    bill.value = updatedBillResponse.data as Bill
+    clearActiveItemBill()
+    toogleShowEditItemModal()
+  } catch (error) {
+    console.error('Error update item:', error)
+    // TODO: tambahin loading sama error indicator
+  }
 }
 
-const editItemBill = (): void => {
-  // set to props if request success
-  const item = props.bill.bill_item.find(item2 => item2.id === currentSelectedItem.value.id)
-  if (item) {
-    item.name = currentSelectedItem.value.name
-    item.price = currentSelectedItem.value.price
-    item.qty = currentSelectedItem.value.qty
+const editItemBill = async (): Promise<void> => {
+  const billId = bill.value.id
+  const itemId = currentSelectedItem.value.id
+  try {
+    const updatedBillResponse = await axios.put(`/api/v1/bills/dynamic/${billId}/item/${itemId}`, {
+      name: currentSelectedItem.value.name,
+      price: currentSelectedItem.value.price,
+      quantity: currentSelectedItem.value.qty
+    })
+    if (updatedBillResponse.status === 200) {
+      bill.value = updatedBillResponse.data as Bill
+      currentSelectedItem.value = bill.value.bill_item.find(item => item.id === itemId)
+    } else if (updatedBillResponse.status !== 202) {
+      throw new Error('Failed to update item')
+    }
+    toogleShowEditItemModal()
+    toogleShowModal()
+  } catch (error) {
+    console.error('Error update item:', error)
+    // TODO: tambahin loading sama error indicator
   }
-  toogleShowEditItemModal()
-  toogleShowModal()
 }
 
 const toogleShowModal = () => (showAssignModal.value = !showAssignModal.value)
@@ -111,9 +128,9 @@ const toogleReviewing = () => (isReviewing.value = !isReviewing.value)
 const handleClickBillItem = (data: Array<string>): void => {
   const id = parseInt(data[0])
   // deep copy to prevent edit auto-change props value, may be removed if we can figure out how to revert if request fail
-  currentSelectedItem.value = { ...props.bill.bill_item.find(item => item.id === id) } as BillItem
+  currentSelectedItem.value = { ...bill.value.bill_item.find(item => item.id === id) } as BillItem
   // item is split equally if there's BillMemberItem with null qty
-  if (props.bill.bill_member_item.some(memberItems => memberItems.bill_item_id === id && memberItems.qty === null)) {
+  if (bill.value.bill_member_item.some(memberItems => memberItems.bill_item_id === id && memberItems.qty === null)) {
     currentSelectedItemSplitMode.value = 'equal'
   } else {
     currentSelectedItemSplitMode.value = 'person'
@@ -134,7 +151,7 @@ const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
       memberItem.qty++
     } else if (operation === 'sub') {
       if (memberItem.qty === 1) {
-        props.bill.bill_member_item = props.bill.bill_member_item.filter(im => im.bill_member_id !== memberItem.bill_member_id && im.bill_item_id !== memberItem.bill_item_id)
+        bill.value.bill_member_item = bill.value.bill_member_item.filter(im => im.bill_member_id !== memberItem.bill_member_id && im.bill_item_id !== memberItem.bill_item_id)
       } else {
         memberItem.qty--
       }
@@ -147,27 +164,27 @@ const handleSelectUser = (user: BillMember): void => {
   //       harusnya bisa di batch update pake temporary ref
   if (currentSelectedItemSplitMode.value === 'person' && !isMemberHasThisItem(user.id, currentSelectedItem.value.id)) {
     const newMemberItem: BillMemberItem = {
-      bill_id: props.bill.id,
+      bill_id: bill.value.id,
       bill_item_id: currentSelectedItem.value.id ?? 0,
       bill_member_id: user.id ?? 0,
       qty: 1
     }
-    // request first, then update props.bill if success
-    props.bill.bill_member_item.push(newMemberItem)
+    // request first, then update bill.value if success
+    bill.value.bill_member_item.push(newMemberItem)
   } else if (currentSelectedItemSplitMode.value === 'equal') {
     const memberItems: BillMemberItem | undefined = getMemberItem(user.id, currentSelectedItem.value.id)
     if (memberItems) {
-      // request first, then update props.bill if success
-      props.bill.bill_member_item = props.bill.bill_member_item.filter(im => im.bill_member_id !== memberItems.bill_member_id && im.bill_item_id !== memberItems.bill_item_id)
+      // request first, then update bill.value if success
+      bill.value.bill_member_item = bill.value.bill_member_item.filter(im => im.bill_member_id !== memberItems.bill_member_id && im.bill_item_id !== memberItems.bill_item_id)
     } else {
       const newMemberItem: BillMemberItem = {
-        bill_id: props.bill.id,
+        bill_id: bill.value.id,
         bill_item_id: currentSelectedItem.value.id ?? 0,
         bill_member_id: user.id ?? 0,
         qty: null
       }
-      // request first, then update props.bill if success
-      props.bill.bill_member_item.push(newMemberItem)
+      // request first, then update bill.value if success
+      bill.value.bill_member_item.push(newMemberItem)
     }
   }
 }
@@ -197,7 +214,7 @@ const getMemberItem = (member_id: number | undefined, item_id: number | undefine
   if (member_id === undefined || item_id === undefined) {
     return undefined
   }
-  return props.bill.bill_member_item.find(
+  return bill.value.bill_member_item.find(
     memberItem => memberItem.bill_item_id === item_id && memberItem.bill_member_id === member_id
   )
 }
@@ -221,7 +238,7 @@ const getItemQtyForThisMember = (member_id: number | undefined, item_id: number 
 }
 
 const handleConfirmation = (): void => {
-  console.log('props.bill: ', props.bill)
+  console.log('bill.value: ', bill.value)
   internalProgress.value = InternalProgress.CONTACT
 }
 
@@ -232,14 +249,14 @@ const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
   currentSelectedItemSplitMode.value = mode
   if (mode === 'equal') {
     // set all item member qty to null
-    props.bill.bill_member_item.forEach(memberItem => {
+    bill.value.bill_member_item.forEach(memberItem => {
       if (memberItem.bill_item_id === currentSelectedItem.value.id) {
         memberItem.qty = null
       }
     })
   } else {
     // set all item member qty to 1
-    props.bill.bill_member_item.forEach(memberItem => {
+    bill.value.bill_member_item.forEach(memberItem => {
       if (memberItem.bill_item_id === currentSelectedItem.value.id) {
         memberItem.qty = 1
       }
@@ -247,32 +264,17 @@ const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
   }
 }
 
-// TODO: move this to a separate file for API calls
-const useBill = async (id: string): Promise<Bill> => {
-  try {
-    const response = await axios.get(`/api/v1/bills/${id}`)
-    if(response.status !== 200){
-      throw new Error('Error')
-    }
-    return response.data as Bill
-  } catch (error) {
-    console.error('Error fetching bill:', error)
-    throw new Error('Failed to fetch bill data')
-  }
-}
-
 const handleAddItem = async (): Promise<void> => {
-  // request first, then update props.bill if success
   try {
-    const updatedBillResponse = await axios.post(`/api/v1/bills/dynamic/${props.bill.id}/item`, {
+    const updatedBillResponse = await axios.post(`/api/v1/bills/dynamic/${bill.value.id}/item/`, {
       name: newItem.value.name,
       price: newItem.value.price,
-      qty: newItem.value.qty
+      quantity: newItem.value.qty
     })
     if (updatedBillResponse.status !== 201) {
       throw new Error('Failed to add item')
     }
-    // props.bill = updatedBillResponse.data as Bill // tar di commit abis ini dibenerin
+    bill.value = updatedBillResponse.data as Bill
     toggleShowAddItemModal()
     // clear new item data
     newItem.value = {
@@ -296,9 +298,10 @@ const handleAddUserClick = (): void => {
 }
 
 const handleMemberNameChange = (member_id: number | undefined, $event: Event): void => {
+  // TODO: edit member masih ngebug
   // stupid typescript
   if (member_id) {
-    const selectedMember = props.bill.bill_member.find(member => member.id === member_id)
+    const selectedMember = bill.value.bill_member.find(member => member.id === member_id)
     if (selectedMember) {
       selectedMember.name = ($event.target as HTMLInputElement).value
     }
@@ -349,8 +352,8 @@ const handleTouchEnd = (memberId: number | undefined, event?: TouchEvent): void 
     // Actually delete after animation completes
     setTimeout(() => {
       // TODO: request buat delete member
-      props.bill.bill_member = props.bill.bill_member.filter(user => user.id !== memberId)
-      props.bill.bill_member_item = props.bill.bill_member_item.filter(
+      bill.value.bill_member = bill.value.bill_member.filter(user => user.id !== memberId)
+      bill.value.bill_member_item = bill.value.bill_member_item.filter(
         item => item.bill_member_id !== memberId
       )
       swipeOffset.value.delete(memberId)
@@ -415,7 +418,7 @@ const registerInputRef = (memberId: number | undefined, el: any): void => {
         />
       </section>
       <section class="flex flex-col gap-y-5">
-        <BaseTitle className="text-center" tag="h6" :msg="props.bill.name" />
+        <BaseTitle className="text-center" tag="h6" :msg="bill.name" />
         <div class="flex flex-col gap-y-3">
           <BaseTable
             :withNumber="false"
@@ -431,18 +434,18 @@ const registerInputRef = (memberId: number | undefined, el: any): void => {
           />
         </div>
         <!--   TODO: Tax and Service auto-change ref value or use separate handler on change    -->
-        <!--   TODO TLDR: value disini belum ngubah value di props.bill            -->
+        <!--   TODO TLDR: value disini belum ngubah value di bill            -->
         <div class="flex justify-between mt-5">
           <BaseParagraph msg="Tax" />
-          <BaseParagraph :contenteditable="true" :msg="props.bill.bill_data.tax.toString()" />
+          <BaseParagraph :contenteditable="true" :msg="bill.bill_data.tax.toString()" />
         </div>
         <div class="flex justify-between">
           <BaseParagraph msg="Service" />
-          <BaseParagraph :contenteditable="true" :msg="props.bill.bill_data.service.toString()" />
+          <BaseParagraph :contenteditable="true" :msg="bill.bill_data.service.toString()" />
         </div>
         <div class="flex justify-between mt-5">
           <BaseParagraph className="font-semibold" msg="Total" />
-          <BaseParagraph :msg="props.bill.bill_data.total.toString()" />
+          <BaseParagraph :msg="bill.bill_data.total.toString()" />
         </div>
       </section>
     </div>
@@ -458,7 +461,7 @@ const registerInputRef = (memberId: number | undefined, el: any): void => {
       <template v-slot:body>
         <div class="flex gap-y-5 pb-5 items-center flex-col h-80 overflow-y-scroll">
           <BaseAccordion
-            v-for="member in props.bill.bill_member"
+            v-for="member in bill.bill_member"
             :key="member.id"
           >
             <template v-slot:title>
@@ -470,7 +473,7 @@ const registerInputRef = (memberId: number | undefined, el: any): void => {
             <template v-slot:body>
               <ol>
                 <li
-                  v-for="item in props.bill.bill_item.filter((item2) =>
+                  v-for="item in bill.bill_item.filter((item2) =>
                             isMemberHasThisItem(member.id, item2.id)
                           )"
                   :key="item.id"
@@ -589,7 +592,7 @@ const registerInputRef = (memberId: number | undefined, el: any): void => {
           />
         </div>
         <div
-          v-for="(member, index) in props.bill.bill_member"
+          v-for="(member, index) in bill.bill_member"
           :key="member.id"
           :ref="el => (userContainerList[index] = el)"
           class="relative overflow-hidden"

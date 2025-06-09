@@ -54,6 +54,7 @@ watch(() => billId, fetchData, { immediate: true })
 
 const internalProgress = ref<InternalProgress>(InternalProgress.CREATOR)
 provide('internalProgress', internalProgress)
+provide('bill', data)
 
 const currStep = inject('currStep') as Ref<number>
 const maxStep = inject('maxStep') as Ref<number>
@@ -74,9 +75,9 @@ watch(internalProgress, (newVal) => {
   <div v-if="loading" class="flex-1 text-2xl place-content-center"><p>Loading...</p></div>
   <div v-if="error" class="flex-1 text-2xl place-content-center"><p>{{ error }}</p></div>
   <template v-if="data">
-    <Creator :bill="data" v-if="internalProgress === InternalProgress.CREATOR" />
-    <Contact :bill="data" v-if="internalProgress === InternalProgress.CONTACT" />
-    <Share :bill="data" v-if="internalProgress === InternalProgress.SHARE" />
+    <Creator v-if="internalProgress === InternalProgress.CREATOR" />
+    <Contact v-if="internalProgress === InternalProgress.CONTACT" />
+    <Share v-if="internalProgress === InternalProgress.SHARE" />
   </template>
 </template>
 

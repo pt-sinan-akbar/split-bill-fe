@@ -8,31 +8,28 @@ import PrevButton from '@/components/elements/Button/Variants/PrevButton.vue'
 import type { Bill, BillOwner } from '@/types/Bill'
 import { InternalProgress } from '@/types/BillCreatorInternalProgress'
 
-const props = defineProps<{
-  bill: Bill
-}>()
-
+const bill = inject('bill') as Ref<Bill>
 const billOwner = ref<BillOwner>({
   name: '',
   contact: '',
   bank_account: '',
 })
-if (props.bill.bill_owner !== null) {
-  billOwner.value = props.bill.bill_owner
+if (bill.value.bill_owner !== null) {
+  billOwner.value = bill.value.bill_owner
 }
 const internalProgress = inject('internalProgress') as Ref<InternalProgress>
 
 const handleSubmit = (): void => {
   // TODO: validate data input
   console.log('submitted data: ', billOwner.value)
-  props.bill.bill_owner = billOwner.value
+  bill.value.bill_owner = billOwner.value
   internalProgress.value = InternalProgress.SHARE
 }
 
 const handleBack = (): void => {
   console.log('return to creator: ', billOwner.value)
   // save as draft
-  props.bill.bill_owner = billOwner.value
+  bill.value.bill_owner = billOwner.value
   internalProgress.value = InternalProgress.CREATOR
 }
 

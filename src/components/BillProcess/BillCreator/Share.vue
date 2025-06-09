@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { inject, type Ref, ref } from 'vue'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import BaseParagraph from '@/components/elements/Typography/BaseParagraph.vue'
 import BaseTitle from '@/components/elements/Typography/BaseTitle.vue'
@@ -7,11 +7,9 @@ import UrlButton from '@/components/elements/Button/Variants/UrlButton.vue'
 import { FwbImg } from 'flowbite-vue'
 import type { Bill } from '@/types/Bill'
 
-const props = defineProps<{
-  bill: Bill
-}>()
+const bill = inject('bill') as Ref<Bill>
 
-const urlMsg = ref<string>('https://splitbill.dta32.my.id/s/' + props.bill.id)
+const urlMsg = ref<string>('https://splitbill.dta32.my.id/s/' + bill.value.id)
 
 const copyUrl = (): void => {
   if (!urlMsg.value) return
