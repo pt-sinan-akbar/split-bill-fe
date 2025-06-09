@@ -38,6 +38,7 @@ export interface BillItem {
   subtotal: number,
   created_at?: string,
   updated_at?: string,
+  bill_member?: null,
 }
 
 export interface BillMember {
@@ -47,6 +48,7 @@ export interface BillMember {
   price_owe: number | null,
   created_at?: string,
   updated_at?: string,
+  bill_item?: null,
 }
 
 export interface BillMemberItem {

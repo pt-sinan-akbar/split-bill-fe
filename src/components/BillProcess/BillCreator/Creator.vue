@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, type Ref, ref } from 'vue'
+import { computed, inject, type Ref, ref } from 'vue'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import BaseTitle from '@/components/elements/Typography/BaseTitle.vue'
 import BaseParagraph from '@/components/elements/Typography/BaseParagraph.vue'
@@ -12,6 +12,7 @@ import BaseAccordion from '@/components/elements/BaseAccordion.vue'
 import type { Bill, BillItem, BillMemberItem, BillMember } from '@/types/Bill'
 import router from '@/router'
 import { InternalProgress } from '@/types/BillCreatorInternalProgress'
+import axios from 'axios'
 
 const props = defineProps<{
   bill: Bill
@@ -24,6 +25,15 @@ const isReviewing = ref<boolean>(false)
 const errAssign = ref<HTMLElement | null>(null)
 const errMsg = ref<string>('')
 const internalProgress = inject('internalProgress') as Ref<InternalProgress>
+const isNewMember = ref<boolean>(false)
+const newMemberInput = ref<HTMLInputElement | null>(null)
+const longPressTimer = ref<number | null>(null)
+const isLongPressing = ref<boolean>(false)
+const memberInputRefs = ref<Map<number, HTMLInputElement>>(new Map())
+const editableMemberIds = ref<Set<number>>(new Set())
+const isUserSwiping = ref<boolean>(false)
+const swipeOffset = ref<Map<number, number>>(new Map())
+const showDeleteBackground = ref<Set<number>>(new Set())
 
 const currentSelectedItem = ref<BillItem>({
   id: 0,
@@ -36,26 +46,22 @@ const currentSelectedItem = ref<BillItem>({
   service: 0,
   subtotal: 0,
   created_at: '',
-  updated_at: ''
+  updated_at: '',
+  bill_member: null
 })
 const currentSelectedItemSplitMode = ref<'person' | 'equal'>('person')
 
-const newItem = ref<BillItem>({
-  bill_id: '',
+const newItem = ref({
   name: '',
-  discount: 0,
   price: 0,
-  qty: 0,
-  tax: 0,
-  service: 0,
-  subtotal: 0,
+  qty: 0
 })
 
 const body = computed<Array<Array<string>>>(() => {
   return props.bill.bill_item.map(item => [
     (item.id ?? 0).toString(),
     item.name,
-    item.price.toString()
+    item.subtotal.toString()
   ])
 })
 
@@ -63,35 +69,17 @@ const showAssignModal = ref<boolean>(false)
 const showEditItemModal = ref<boolean>(false)
 const showAddItemModal = ref<boolean>(false)
 
-const addNewUser = (): void => {
+const addNewUser = ($event: Event): void => {
+  const newMemberName = ($event.target as HTMLInputElement).value.trim()
   // request from BE for new member with empty name, then push to props
   props.bill.bill_member.push({
     id: props.bill.bill_member.length + 1,
     bill_id: props.bill.id,
-    name: 'New User',
+    name: newMemberName,
     price_owe: null
   })
+  isNewMember.value = false
 }
-
-const checkDirection = (id: number): void => {
-  const isSwipeLeft = touchEndX.value < touchStartX.value
-  if (isSwipeLeft) {
-    // delete user, request first then update props.bill if success
-    props.bill.bill_member = props.bill.bill_member.filter(user => user.id !== id)
-  }
-}
-
-onMounted(() => {
-  userContainerList.value.forEach((el: HTMLElement, index: number) => {
-    el.addEventListener('touchstart', (e: TouchEvent) => {
-      touchStartX.value = e.changedTouches[0].screenX
-    })
-    el.addEventListener('touchend', (e: TouchEvent) => {
-      touchEndX.value = e.changedTouches[0].screenX
-      checkDirection(index)
-    })
-  })
-})
 
 const handleEditItem = (): void => {
   toogleShowModal()
@@ -259,36 +247,158 @@ const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
   }
 }
 
-const handleAddItem = (): void => {
-  // request first, then update props.bill if success
-  const newItemData: BillItem = {
-    id: props.bill.bill_item.length + 1,
-    bill_id: props.bill.id,
-    name: newItem.value.name,
-    discount: newItem.value.discount,
-    price: newItem.value.price,
-    qty: newItem.value.qty,
-    tax: newItem.value.tax,
-    service: newItem.value.service,
-    subtotal: newItem.value.subtotal,
-    created_at: '',
-    updated_at: ''
+// TODO: move this to a separate file for API calls
+const useBill = async (id: string): Promise<Bill> => {
+  try {
+    const response = await axios.get(`/api/v1/bills/${id}`)
+    if(response.status !== 200){
+      throw new Error('Error')
+    }
+    return response.data as Bill
+  } catch (error) {
+    console.error('Error fetching bill:', error)
+    throw new Error('Failed to fetch bill data')
   }
-  props.bill.bill_item.push(newItemData)
-  toggleShowAddItemModal()
-  // clear new item data
-  newItem.value = {
-    id: 0,
-    bill_id: '',
-    name: '',
-    discount: 0,
-    price: 0,
-    qty: 0,
-    tax: 0,
-    service: 0,
-    subtotal: 0,
-    created_at: '',
-    updated_at: ''
+}
+
+const handleAddItem = async (): Promise<void> => {
+  // request first, then update props.bill if success
+  try {
+    const updatedBillResponse = await axios.post(`/api/v1/bills/dynamic/${props.bill.id}/item`, {
+      name: newItem.value.name,
+      price: newItem.value.price,
+      qty: newItem.value.qty
+    })
+    if (updatedBillResponse.status !== 201) {
+      throw new Error('Failed to add item')
+    }
+    // props.bill = updatedBillResponse.data as Bill // tar di commit abis ini dibenerin
+    toggleShowAddItemModal()
+    // clear new item data
+    newItem.value = {
+      name: '',
+      price: 0,
+      qty: 0
+    }
+  } catch (error) {
+    console.error('Error adding item:', error)
+    // TODO: tambahin loading sama error indicator
+  }
+}
+
+const handleAddUserClick = (): void => {
+  isNewMember.value = true
+  setTimeout(() => {
+    if (newMemberInput.value) {
+      newMemberInput.value.focus()
+    }
+  }, 0)
+}
+
+const handleMemberNameChange = (member_id: number | undefined, $event: Event): void => {
+  // stupid typescript
+  if (member_id) {
+    const selectedMember = props.bill.bill_member.find(member => member.id === member_id)
+    if (selectedMember) {
+      selectedMember.name = ($event.target as HTMLInputElement).value
+    }
+    editableMemberIds.value.delete(member_id)
+  }
+}
+// functions below is vibe coded, idk bout these logics
+const handleTouchStart = (memberId: number | undefined, event: TouchEvent): void => {
+  if (memberId === undefined) return
+  isLongPressing.value = false
+  touchStartX.value = event.changedTouches[0].screenX
+  longPressTimer.value = setTimeout(() => {
+    isLongPressing.value = true
+  }, 500) as unknown as number // 500ms for long press detection
+}
+
+const handleTouchEnd = (memberId: number | undefined, event?: TouchEvent): void => {
+  if (event) {
+    touchEndX.value = event.changedTouches[0].screenX
+  }
+
+  if (memberId === undefined) return
+
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+
+    // Only focus for editing if it was a long press AND not a swipe
+    if (isLongPressing.value && memberId && !isUserSwiping.value) {
+      editableMemberIds.value.add(memberId)
+      const input = memberInputRefs.value.get(memberId)
+      if (input) {
+        setTimeout(() => {
+          input.readOnly = false
+          input.focus()
+          input.click()
+        }, 10)
+      }
+    }
+  }
+
+  // Animate back or complete delete based on swipe distance
+  const swipeDist = touchStartX.value - touchEndX.value
+  if (swipeDist > 100) { // Delete threshold
+    // Animate fully off-screen
+    swipeOffset.value.set(memberId, window.innerWidth)
+
+    // Actually delete after animation completes
+    setTimeout(() => {
+      // TODO: request buat delete member
+      props.bill.bill_member = props.bill.bill_member.filter(user => user.id !== memberId)
+      props.bill.bill_member_item = props.bill.bill_member_item.filter(
+        item => item.bill_member_id !== memberId
+      )
+      swipeOffset.value.delete(memberId)
+      showDeleteBackground.value.delete(memberId)
+    }, 300) // Match transition duration
+  } else {
+    // Reset the animation
+    swipeOffset.value.delete(memberId)
+    showDeleteBackground.value.delete(memberId)
+  }
+
+  isUserSwiping.value = false
+}
+
+const handleTouchMove = (event: TouchEvent, memberId?: number): void => {
+  // Cancel long press if finger moves
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+
+  if (memberId === undefined) return
+
+  // Mark that the user is swiping
+  const currentX = event.touches[0].screenX
+  const moveDistance = touchStartX.value - currentX
+
+  if (moveDistance > 10) { // Small threshold to detect intentional movement
+    isUserSwiping.value = true
+
+    // Only allow leftward swipes (positive moveDistance)
+    if (moveDistance > 0) {
+      // Update the swipe offset (capped at 100px max)
+      swipeOffset.value.set(memberId, Math.min(moveDistance, 100))
+
+      // Show delete background when swiped more than halfway
+      if (moveDistance > 10) {
+        showDeleteBackground.value.add(memberId)
+      } else {
+        showDeleteBackground.value.delete(memberId)
+      }
+    }
+  }
+}
+
+const registerInputRef = (memberId: number | undefined, el: any): void => {
+  if (el && memberId) {
+    memberInputRefs.value.set(memberId, el)
   }
 }
 
@@ -426,6 +536,16 @@ const handleAddItem = (): void => {
               type="number"
             />
           </div>
+          <div class="flex justify-between gap-x-5 *:*:text-gray-500">
+            <div class="flex flex-col gap-y-2 w-full" v-if="currentSelectedItem.tax > 0">
+              <BaseParagraph msg="Tax" />
+              <BaseParagraph :msg="currentSelectedItem.tax.toString()" />
+            </div>
+            <div class="flex flex-col gap-y-2 w-full" v-if="currentSelectedItem.service > 0">
+              <BaseParagraph msg="Service" />
+              <BaseParagraph :msg="currentSelectedItem.service.toString()" />
+            </div>
+          </div>
         </div>
       </template>
       <template v-slot:fotoer>
@@ -455,37 +575,61 @@ const handleAddItem = (): void => {
       <template v-slot:body>
         <div class="w-full flex space-x-5 items-center justify-around my-5 text-nowrap">
           <BaseButton
-            :outline="currentSelectedItemSplitMode === 'equal'"
+            :outline="!(currentSelectedItemSplitMode === 'person')"
             msg="Split per person"
             @handle-click="handleSplitModeChanges('person')"
+            :class="!(currentSelectedItemSplitMode === 'person') ? '!text-black hover:!text-white' : '!text-white hover:!text-white'"
           />
           <BaseParagraph msg="or" />
           <BaseButton
-            :outline="currentSelectedItemSplitMode === 'person'"
+            :outline="!(currentSelectedItemSplitMode === 'equal')"
             msg="Split equally"
             @handle-click="handleSplitModeChanges('equal')"
+            :class="!(currentSelectedItemSplitMode === 'equal') ? '!text-black hover:!text-white' : '!text-white hover:!text-white'"
           />
         </div>
-        <div class="w-full flex flex-col justify-start max-h-60 overflow-y-scroll">
+        <div
+          v-for="(member, index) in props.bill.bill_member"
+          :key="member.id"
+          :ref="el => (userContainerList[index] = el)"
+          class="relative overflow-hidden"
+        >
+          <!-- Delete indicator background -->
           <div
-            v-for="(member, index) in props.bill.bill_member"
-            :key="member.id"
-            :ref="el => (userContainerList[index] = el)"
+            class="absolute inset-0 flex items-center justify-end bg-red-500 text-white pr-4"
+            :class="{ 'opacity-100': showDeleteBackground.has(member.id ?? 0), 'opacity-0': !showDeleteBackground.has(member.id ?? 0) }"
+          >
+            <span>Delete</span>
+          </div>
+
+          <!-- Main content with swipe animation -->
+          <div
             :class="[
-              'flex gap-x-5 border-b-2 p-3 items-center',
+              'flex gap-x-5 border-b-2 p-3 items-center relative',
               (isMemberHasThisItem(member.id, currentSelectedItem.id)) ? 'bg-yellow-100' : 'bg-white'
             ]"
+            :style="{
+              transform: `translateX(-${swipeOffset.get(member.id ?? 0) || 0}px)`,
+              transition: isUserSwiping ? 'none' : 'transform 0.3s ease'
+            }"
+            @click="handleSelectUser(member)"
+            @touchstart="(e) => { isUserSwiping = false; handleTouchStart(member.id, e) }"
+            @touchend="(e) => { handleTouchEnd(member.id, e); }"
+            @touchmove="(e) => handleTouchMove(e, member.id)"
           >
             <div class="w-fit">
               <InitialAvatar :name="member.name" />
             </div>
             <div
               class="flex justify-between items-center w-full"
-              @click="handleSelectUser(member)"
             >
-              <!--    TODO: member name auto-change ref value or use separate handler on change     -->
-              <!--    TODO TLDR: value disini belum ngubah value di props.bill            -->
-              <BaseParagraph :contenteditable="true" :msg="member.name" />
+              <input type="text"
+                     class="w-full text-lg bg-transparent outline-none border-0 focus:outline-none focus:ring-0"
+                     :value="member.name"
+                     @blur="handleMemberNameChange(member.id, $event)"
+                     :ref="el => registerInputRef(member.id, el)"
+                     :readonly="!editableMemberIds.has(member.id ?? 0)"
+              />
               <div class="flex gap-x-3 items-center"
                    v-if="isMemberHasThisItem(member.id, currentSelectedItem.id) && currentSelectedItemSplitMode === 'person'">
                 <BaseButton
@@ -505,6 +649,14 @@ const handleAddItem = (): void => {
             </div>
           </div>
         </div>
+        <div class="flex gap-x-5 border-b-2 p-3 items-center bg-white" v-if="isNewMember">
+          <div class="w-fit">
+            <div class="rounded-full bg-gray-400 w-10 h-10" />
+          </div>
+          <input ref="newMemberInput" type="text"
+                 class="w-full text-lg bg-transparent outline-none border-0"
+                 @blur="addNewUser($event)" />
+        </div>
         <BaseParagraph
           ref="errAssign"
           :msg="errMsg"
@@ -512,7 +664,7 @@ const handleAddItem = (): void => {
         />
         <div class="flex gap-x-5 my-3 justify-end">
           <BaseButton
-            @handle-click="addNewUser"
+            @handle-click="handleAddUserClick"
             :outline="true"
             size="sm"
             msg="Add user ..."
