@@ -66,16 +66,22 @@ const showAssignModal = ref<boolean>(false)
 const showEditItemModal = ref<boolean>(false)
 const showAddItemModal = ref<boolean>(false)
 
-const addNewUser = ($event: Event): void => {
+const addNewUser = async ($event: Event): Promise<void> => {
   const newMemberName = ($event.target as HTMLInputElement).value.trim()
-  // request from BE for new member with empty name, then push to props
-  bill.value.bill_member.push({
-    id: bill.value.bill_member.length + 1,
-    bill_id: bill.value.id,
-    name: newMemberName,
-    price_owe: null
-  })
-  isNewMember.value = false
+  try {
+    const newUserResponse = await axios.post(`/api/v1/billmembers`, {
+      name: newMemberName,
+      bill_id: bill.value.id
+    })
+    if (newUserResponse.status !== 200) {
+      throw new Error('Failed to create new member')
+    }
+    bill.value.bill_member.push(newUserResponse.data as BillMember)
+    isNewMember.value = false
+  } catch (error) {
+    console.error('Error creating new member:', error)
+    // TODO: tambahin loading sama error indicator
+  }
 }
 
 const handleEditItem = (): void => {
@@ -111,7 +117,10 @@ const editItemBill = async (): Promise<void> => {
     })
     if (updatedBillResponse.status === 200) {
       bill.value = updatedBillResponse.data as Bill
-      currentSelectedItem.value = bill.value.bill_item.find(item => item.id === itemId)
+      const updatedData = bill.value.bill_item.find(item => item.id === itemId)
+      if(updatedData){
+        currentSelectedItem.value = { ...updatedData } as BillItem
+      }
     } else if (updatedBillResponse.status !== 202) {
       throw new Error('Failed to update item')
     }
@@ -151,7 +160,9 @@ const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
       memberItem.qty++
     } else if (operation === 'sub') {
       if (memberItem.qty === 1) {
-        bill.value.bill_member_item = bill.value.bill_member_item.filter(im => im.bill_member_id !== memberItem.bill_member_id && im.bill_item_id !== memberItem.bill_item_id)
+        bill.value.bill_member_item = bill.value.bill_member_item.filter(
+          item => !(item.bill_member_id === member.id && item.bill_item_id === currentSelectedItem.value.id)
+        )
       } else {
         memberItem.qty--
       }
@@ -175,7 +186,9 @@ const handleSelectUser = (user: BillMember): void => {
     const memberItems: BillMemberItem | undefined = getMemberItem(user.id, currentSelectedItem.value.id)
     if (memberItems) {
       // request first, then update bill.value if success
-      bill.value.bill_member_item = bill.value.bill_member_item.filter(im => im.bill_member_id !== memberItems.bill_member_id && im.bill_item_id !== memberItems.bill_item_id)
+      bill.value.bill_member_item = bill.value.bill_member_item.filter(
+        item => !(item.bill_member_id === user.id && item.bill_item_id === currentSelectedItem.value.id)
+      )
     } else {
       const newMemberItem: BillMemberItem = {
         bill_id: bill.value.id,
@@ -297,15 +310,31 @@ const handleAddUserClick = (): void => {
   }, 0)
 }
 
-const handleMemberNameChange = (member_id: number | undefined, $event: Event): void => {
-  // TODO: edit member masih ngebug
+const handleMemberNameChange = async (member_id: number | undefined, $event: Event): Promise<void> => {
+  // TODO: hold to edit member masih ngebug
   // stupid typescript
   if (member_id) {
     const selectedMember = bill.value.bill_member.find(member => member.id === member_id)
-    if (selectedMember) {
-      selectedMember.name = ($event.target as HTMLInputElement).value
+    const editedName = ($event.target as HTMLInputElement).value
+    // idk why on click it tries to edit too, this is the hack
+    if (selectedMember && (editedName.trim() !== selectedMember.name)) {
+      try {
+        const editUserResponse = await axios.put(`/api/v1/billmembers/${member_id}`, {
+          name: editedName
+        })
+        if (editUserResponse.status !== 200) {
+          throw new Error('Failed to edit member name')
+        }
+        const index = bill.value.bill_member.findIndex(member => member.id === member_id)
+        if (index !== -1) {
+          bill.value.bill_member[index] = editUserResponse.data as BillMember
+        }
+        editableMemberIds.value.delete(member_id)
+      } catch (error) {
+        console.error('Error updating member name:', error)
+        // TODO: tambahin loading sama error indicator
+      }
     }
-    editableMemberIds.value.delete(member_id)
   }
 }
 // functions below is vibe coded, idk bout these logics
@@ -351,11 +380,7 @@ const handleTouchEnd = (memberId: number | undefined, event?: TouchEvent): void 
 
     // Actually delete after animation completes
     setTimeout(() => {
-      // TODO: request buat delete member
-      bill.value.bill_member = bill.value.bill_member.filter(user => user.id !== memberId)
-      bill.value.bill_member_item = bill.value.bill_member_item.filter(
-        item => item.bill_member_id !== memberId
-      )
+      deleteMember(memberId)
       swipeOffset.value.delete(memberId)
       showDeleteBackground.value.delete(memberId)
     }, 300) // Match transition duration
@@ -366,6 +391,21 @@ const handleTouchEnd = (memberId: number | undefined, event?: TouchEvent): void 
   }
 
   isUserSwiping.value = false
+}
+
+const deleteMember = async (memberId: number): Promise<void> => {
+  try {
+    const response = await axios.delete(`/api/v1/bills/dynamic/${bill.value.id}/member/${memberId}`)
+    if (response.status !== 200) {
+      throw new Error('Failed to delete member')
+    }
+    bill.value.bill_member = bill.value.bill_member.filter(user => user.id !== memberId)
+    bill.value.bill_member_item = bill.value.bill_member_item.filter(
+      item => item.bill_member_id !== memberId
+    )
+  } catch (error) {
+    console.error('Error deleting member:', error)
+  }
 }
 
 const handleTouchMove = (event: TouchEvent, memberId?: number): void => {
