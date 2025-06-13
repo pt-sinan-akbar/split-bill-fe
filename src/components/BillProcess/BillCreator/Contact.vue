@@ -44,7 +44,7 @@ const upsertContact = async (): Promise<BillOwner> => {
   }
   try {
     const response = await axios.post(
-      `/api/v1/bills/dynamic/${bill.value.id}/owner/`, data
+      `/api/v1/bills/${bill.value.id}/dynamic/owner`, data
     )
     if (response.status !== 200) {
       throw new Error('Error saving contact')

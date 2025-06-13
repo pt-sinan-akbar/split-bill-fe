@@ -93,7 +93,7 @@ const handleDeleteItem = async (): Promise<void> => {
   const billId = bill.value.id
   const itemId = currentSelectedItem.value.id
   try {
-    const updatedBillResponse = await axios.delete(`/api/v1/bills/dynamic/${billId}/item/${itemId}`)
+    const updatedBillResponse = await axios.delete(`/api/v1/bills/${billId}/dynamic/item/${itemId}`)
     if (updatedBillResponse.status !== 200) {
       throw new Error('Failed to update item')
     }
@@ -110,7 +110,7 @@ const editItemBill = async (): Promise<void> => {
   const billId = bill.value.id
   const itemId = currentSelectedItem.value.id
   try {
-    const updatedBillResponse = await axios.put(`/api/v1/bills/dynamic/${billId}/item/${itemId}`, {
+    const updatedBillResponse = await axios.put(`/api/v1/bills/${billId}/dynamic/item/${itemId}`, {
       name: currentSelectedItem.value.name,
       price: currentSelectedItem.value.price,
       quantity: currentSelectedItem.value.qty
@@ -279,7 +279,7 @@ const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
 
 const handleAddItem = async (): Promise<void> => {
   try {
-    const updatedBillResponse = await axios.post(`/api/v1/bills/dynamic/${bill.value.id}/item/`, {
+    const updatedBillResponse = await axios.post(`/api/v1/bills/${bill.value.id}/dynamic/item`, {
       name: newItem.value.name,
       price: newItem.value.price,
       quantity: newItem.value.qty
@@ -395,7 +395,7 @@ const handleTouchEnd = (memberId: number | undefined, event?: TouchEvent): void 
 
 const deleteMember = async (memberId: number): Promise<void> => {
   try {
-    const response = await axios.delete(`/api/v1/bills/dynamic/${bill.value.id}/member/${memberId}`)
+    const response = await axios.delete(`/api/v1/bills/${bill.value.id}/dynamic/member/${memberId}`)
     if (response.status !== 200) {
       throw new Error('Failed to delete member')
     }
