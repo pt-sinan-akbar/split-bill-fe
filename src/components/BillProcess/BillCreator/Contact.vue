@@ -7,6 +7,7 @@ import BaseParagraph from '@/components/elements/Typography/BaseParagraph.vue'
 import PrevButton from '@/components/elements/Button/Variants/PrevButton.vue'
 import type { Bill, BillOwner } from '@/types/Bill'
 import { InternalProgress } from '@/types/BillCreatorInternalProgress'
+import axios from 'axios'
 
 const bill = inject('bill') as Ref<Bill>
 const billOwner = ref<BillOwner>({
@@ -19,26 +20,45 @@ if (bill.value.bill_owner !== null) {
 }
 const internalProgress = inject('internalProgress') as Ref<InternalProgress>
 
-const handleSubmit = (): void => {
+const handleSubmit = async (): Promise<void> => {
   // TODO: validate data input
-  console.log('submitted data: ', billOwner.value)
-  bill.value.bill_owner = billOwner.value
+  bill.value.bill_owner = await upsertContact()
+  // TODO: one more request to finalize all data (priceOwe member)
   internalProgress.value = InternalProgress.SHARE
 }
 
-const handleBack = (): void => {
-  console.log('return to creator: ', billOwner.value)
-  // save as draft
-  bill.value.bill_owner = billOwner.value
+const handleBack = async (): Promise<void> => {
+  // TODO: validate data input
+  bill.value.bill_owner = await upsertContact()
   internalProgress.value = InternalProgress.CREATOR
 }
 
+const upsertContact = async (): Promise<BillOwner> => {
+  const data : BillOwner = {
+    name: billOwner.value.name,
+    contact: billOwner.value.contact,
+    bank_account: billOwner.value.bank_account,
+  }
+  if (bill.value.bill_owner?.id) {
+    data.id = bill.value.bill_owner.id
+  }
+  try {
+    const response = await axios.post(
+      `/api/v1/bills/dynamic/${bill.value.id}/owner/`, data
+    )
+    if (response.status !== 200) {
+      throw new Error('Error saving contact')
+    }
+    return response.data as BillOwner
+  } catch (error) {
+    console.error('Error saving contact:', error)
+    throw new Error('Failed to save contact')
+  }
+}
 </script>
 
 <template>
-  <form
-    class="flex flex-col gap-y-5"
-  >
+  <form class="flex flex-col gap-y-5">
     <div class="flex flex-col gap-y-10">
       <section class="flex flex-col gap-y-3">
         <BaseTitle className="text-center" tag="h5" msg="Insert Your Details" />
