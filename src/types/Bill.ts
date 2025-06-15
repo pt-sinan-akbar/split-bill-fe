@@ -39,6 +39,7 @@ export interface BillItem {
   created_at?: string,
   updated_at?: string,
   bill_member?: null,
+  bill_member_item?: BillMemberItem[], // internal use, for managing member items, not returned from API
 }
 
 export interface BillMember {
@@ -56,6 +57,7 @@ export interface BillMemberItem {
   bill_item_id: number,
   bill_member_id: number,
   qty: number | null,
+  deleted_at?: string,
 }
 
 export interface BillOwner {

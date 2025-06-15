@@ -42,7 +42,7 @@ const createManualError = ref<string | null>(null)
 // TODO: move this to a separate file for API calls
 const createBill = async (name: string): Promise<Bill> => {
   try {
-    const response = await axios.post(`/api/v1/bills`, { name })
+    const response = await axios.post(`/api/v1/bills/`, { name })
     if(response.status !== 201){
       throw new Error("Status Code: " + response.status)
     }

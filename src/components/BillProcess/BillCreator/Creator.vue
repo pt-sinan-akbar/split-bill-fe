@@ -32,6 +32,7 @@ const swipeOffset = ref<Map<number, number>>(new Map())
 const showDeleteBackground = ref<Set<number>>(new Set())
 const bill = inject('bill') as Ref<Bill>
 
+// TODO: bill_member_item untested properly, expect edge cases
 const currentSelectedItem = ref<BillItem>({
   id: 0,
   bill_id: '',
@@ -44,7 +45,8 @@ const currentSelectedItem = ref<BillItem>({
   subtotal: 0,
   created_at: '',
   updated_at: '',
-  bill_member: null
+  bill_member: null,
+  bill_member_item: [] // internal use, for managing member items, not returned from API
 })
 const currentSelectedItemSplitMode = ref<'person' | 'equal'>('person')
 
@@ -71,6 +73,11 @@ const showAddItemModal = ref<boolean>(false)
 
 const addNewUser = async ($event: Event): Promise<void> => {
   const newMemberName = ($event.target as HTMLInputElement).value.trim()
+  if (newMemberName === '') {
+    errMsg.value = 'Please enter a name for the new member'
+    isNewMember.value = false
+    return
+  }
   try {
     const newUserResponse = await axios.post(`/api/v1/billmembers`, {
       name: newMemberName,
@@ -140,13 +147,19 @@ const editItemBill = async (): Promise<void> => {
 }
 
 const toogleShowModal = () => (showAssignModal.value = !showAssignModal.value)
-const toogleReviewing = () => (isReviewing.value = !isReviewing.value)
+const toogleReviewing = () => {
+  isReviewing.value = !isReviewing.value
+  errMsg.value = ''
+}
 const handleClickBillItem = (data: Array<string>): void => {
   const id = parseInt(data[0])
   // deep copy to prevent edit auto-change props value, may be removed if we can figure out how to revert if request fail
   currentSelectedItem.value = { ...bill.value.bill_item.find(item => item.id === id) } as BillItem
+  currentSelectedItem.value.bill_member_item = bill.value.bill_member_item.filter(
+    memberItem => memberItem.bill_item_id === id
+  )
   // item is split equally if there's BillMemberItem with null qty
-  if (bill.value.bill_member_item.some(memberItems => memberItems.bill_item_id === id && memberItems.qty === null)) {
+  if (currentSelectedItem.value.bill_member_item.some(memberItems => memberItems.qty === null)) {
     currentSelectedItemSplitMode.value = 'equal'
   } else {
     currentSelectedItemSplitMode.value = 'person'
@@ -160,16 +173,13 @@ const toggleShowAddItemModal = () =>
   (showAddItemModal.value = !showAddItemModal.value)
 
 const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
-  const memberItem: BillMemberItem | undefined = getMemberItem(member.id, currentSelectedItem.value.id)
+  const memberItem: BillMemberItem | undefined = getMemberItemInternal(member.id)
   if (memberItem && memberItem.qty !== null) {
     if (operation === 'add') {
-      // request first, then update props if success
       memberItem.qty++
     } else if (operation === 'sub') {
       if (memberItem.qty === 1) {
-        bill.value.bill_member_item = bill.value.bill_member_item.filter(
-          item => !(item.bill_member_id === member.id && item.bill_item_id === currentSelectedItem.value.id)
-        )
+        memberItem.deleted_at = new Date().toISOString()
       } else {
         memberItem.qty--
       }
@@ -180,22 +190,30 @@ const changeQuantity = (member: BillMember, operation: 'add' | 'sub'): void => {
 const handleSelectUser = (user: BillMember): void => {
   // TODO: user bakal banyak edit disini, kayaknya terlalu banyak network call kalo satu per satu,
   //       harusnya bisa di batch update pake temporary ref
-  if (currentSelectedItemSplitMode.value === 'person' && !isMemberHasThisItem(user.id, currentSelectedItem.value.id)) {
-    const newMemberItem: BillMemberItem = {
-      bill_id: bill.value.id,
-      bill_item_id: currentSelectedItem.value.id ?? 0,
-      bill_member_id: user.id ?? 0,
-      qty: 1
+  if (currentSelectedItemSplitMode.value === 'person' && !isMemberHasThisItemInternal(user.id)) {
+    const memberItem = getMemberItemInternal(user.id)
+    if(memberItem && memberItem.deleted_at !== undefined) {
+      // if member item exists but deleted, restore it
+      memberItem.deleted_at = undefined
+      memberItem.qty = 1
+    } else {
+      const newMemberItem: BillMemberItem = {
+        bill_id: bill.value.id,
+        bill_item_id: currentSelectedItem.value.id ?? 0,
+        bill_member_id: user.id ?? 0,
+        qty: 1
+      }
+      currentSelectedItem.value.bill_member_item?.push(newMemberItem)
     }
-    // request first, then update bill.value if success
-    bill.value.bill_member_item.push(newMemberItem)
   } else if (currentSelectedItemSplitMode.value === 'equal') {
-    const memberItems: BillMemberItem | undefined = getMemberItem(user.id, currentSelectedItem.value.id)
+    const memberItems: BillMemberItem | undefined = getMemberItemInternal(user.id)
     if (memberItems) {
-      // request first, then update bill.value if success
-      bill.value.bill_member_item = bill.value.bill_member_item.filter(
-        item => !(item.bill_member_id === user.id && item.bill_item_id === currentSelectedItem.value.id)
-      )
+      if (memberItems.deleted_at === undefined) {
+        memberItems.deleted_at = new Date().toISOString()
+      } else {
+        memberItems.deleted_at = undefined
+        memberItems.qty = null
+      }
     } else {
       const newMemberItem: BillMemberItem = {
         bill_id: bill.value.id,
@@ -203,15 +221,56 @@ const handleSelectUser = (user: BillMember): void => {
         bill_member_id: user.id ?? 0,
         qty: null
       }
-      // request first, then update bill.value if success
-      bill.value.bill_member_item.push(newMemberItem)
+      currentSelectedItem.value.bill_member_item?.push(newMemberItem)
     }
   }
 }
 
-const handleSubmitAssignItem = (): void => {
-  clearActiveItemBill()
-  toogleShowModal()
+const handleSubmitAssignItem = async (): Promise<void> => {
+  if (currentSelectedItem.value.bill_member_item) {
+    const activeMemberItems = currentSelectedItem.value.bill_member_item.filter(
+      memberItem => memberItem.deleted_at === undefined
+    )
+    if (currentSelectedItemSplitMode.value === 'person'){
+      const qtySum = activeMemberItems.reduce((sum, item) => {
+        return sum + (item.qty ?? 0)
+      }, 0)
+      if (qtySum === 0) {
+        errMsg.value = 'Please select at least one member for this item'
+        return
+      } else if (currentSelectedItem.value.qty < qtySum) {
+        errMsg.value = "Too many members selected for this item, please check again"
+        return
+      } else if (currentSelectedItem.value.qty > qtySum) {
+        errMsg.value = "There's unallocated quantity for this item, please check again"
+        return
+      }
+    } else {
+      const atleastOneMemberSelected = activeMemberItems.some(
+        memberItem => memberItem.qty === null
+      )
+      if (!atleastOneMemberSelected) {
+        errMsg.value = 'Please select at least one member for this item'
+        return
+      }
+    }
+    try {
+      if (currentSelectedItem.value.bill_member_item.length > 0) {
+        const upsertMemberItemResponse = await axios.post(`/api/v1/bills/${bill.value.id}/dynamic/member-items`, currentSelectedItem.value.bill_member_item)
+        if (upsertMemberItemResponse.status !== 200) {
+          throw new Error('Failed to upsert members for this item')
+        }
+        bill.value = upsertMemberItemResponse.data as Bill
+      }
+      clearActiveItemBill()
+      toogleShowModal()
+    } catch (error) {
+      console.error('Error upserting members for this item:', error)
+      // TODO: tambahin loading sama error indicator
+    }
+  } else {
+    errMsg.value = 'Please select at least one member for this item'
+  }
 }
 const clearActiveItemBill = (): void => {
   currentSelectedItem.value = {
@@ -225,9 +284,11 @@ const clearActiveItemBill = (): void => {
     service: 0,
     subtotal: 0,
     created_at: '',
-    updated_at: ''
+    updated_at: '',
+    bill_member_item: [],
   }
   currentSelectedItemSplitMode.value = 'person'
+  errMsg.value = ''
 }
 
 const getMemberItem = (member_id: number | undefined, item_id: number | undefined): BillMemberItem | undefined => {
@@ -257,9 +318,49 @@ const getItemQtyForThisMember = (member_id: number | undefined, item_id: number 
   return null
 }
 
-const handleConfirmation = (): void => {
-  console.log('bill.value: ', bill.value)
-  internalProgress.value = InternalProgress.CONTACT
+const getMemberItemInternal = (member_id: number | undefined): BillMemberItem | undefined => {
+  if (member_id === undefined) {
+    return undefined
+  }
+  return currentSelectedItem.value.bill_member_item?.find(
+    memberItem => memberItem.bill_member_id === member_id
+  )
+}
+
+const isMemberHasThisItemInternal = (member_id: number | undefined): boolean => {
+  if (member_id === undefined) {
+    return false
+  }
+  const memberItem = getMemberItemInternal(member_id)
+  return !!(memberItem && memberItem.deleted_at === undefined);
+}
+
+const getItemQtyForThisMemberInternal = (member_id: number | undefined): number | null => {
+  if (member_id === undefined) {
+    return null
+  }
+  const memberItem = getMemberItemInternal(member_id)
+  if (memberItem && memberItem.deleted_at === undefined) {
+    return memberItem.qty
+  }
+  return null
+}
+
+const handleConfirmation = async (): Promise<void> => {
+  try {
+    const validateBillResponse = await axios.get(`/api/v1/bills/${bill.value.id}/validate`)
+    if (validateBillResponse.status !== 200) {
+      throw new Error(validateBillResponse.data)
+    }
+    internalProgress.value = InternalProgress.CONTACT
+  } catch (error : any) {
+    console.error('Error validating bill:', error)
+    if (error.response && error.response.data) {
+      errMsg.value = error.response.data.message
+    } else {
+      errMsg.value = 'Failed to validate bill, please try again later'
+    }
+  }
 }
 
 const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
@@ -269,15 +370,15 @@ const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
   currentSelectedItemSplitMode.value = mode
   if (mode === 'equal') {
     // set all item member qty to null
-    bill.value.bill_member_item.forEach(memberItem => {
-      if (memberItem.bill_item_id === currentSelectedItem.value.id) {
+    currentSelectedItem.value.bill_member_item?.forEach(memberItem => {
+      if (memberItem.deleted_at === undefined) {
         memberItem.qty = null
       }
     })
   } else {
     // set all item member qty to 1
-    bill.value.bill_member_item.forEach(memberItem => {
-      if (memberItem.bill_item_id === currentSelectedItem.value.id) {
+    currentSelectedItem.value.bill_member_item?.forEach(memberItem => {
+      if (memberItem.deleted_at === undefined) {
         memberItem.qty = 1
       }
     })
@@ -410,6 +511,9 @@ const deleteMember = async (memberId: number): Promise<void> => {
     }
     bill.value.bill_member = bill.value.bill_member.filter(user => user.id !== memberId)
     bill.value.bill_member_item = bill.value.bill_member_item.filter(
+      item => item.bill_member_id !== memberId
+    )
+    currentSelectedItem.value.bill_member_item?.filter(
       item => item.bill_member_id !== memberId
     )
   } catch (error) {
@@ -565,6 +669,11 @@ const handleUpdateData = async (): Promise<void> => {
             </template>
           </BaseAccordion>
         </div>
+        <BaseParagraph
+          v-if="errMsg"
+          class="text-red-500"
+          :msg="errMsg"
+        />
       </template>
       <template v-slot:fotoer>
         <div class="flex gap-x-5">
@@ -687,7 +796,7 @@ const handleUpdateData = async (): Promise<void> => {
           <div
             :class="[
               'flex gap-x-5 border-b-2 p-3 items-center relative',
-              (isMemberHasThisItem(member.id, currentSelectedItem.id)) ? 'bg-yellow-100' : 'bg-white'
+              (isMemberHasThisItemInternal(member.id)) ? 'bg-yellow-100' : 'bg-white'
             ]"
             :style="{
               transform: `translateX(-${swipeOffset.get(member.id ?? 0) || 0}px)`,
@@ -712,14 +821,14 @@ const handleUpdateData = async (): Promise<void> => {
                      :readonly="!editableMemberIds.has(member.id ?? 0)"
               />
               <div class="flex gap-x-3 items-center"
-                   v-if="isMemberHasThisItem(member.id, currentSelectedItem.id) && currentSelectedItemSplitMode === 'person'">
+                   v-if="isMemberHasThisItemInternal(member.id) && currentSelectedItemSplitMode === 'person'">
                 <BaseButton
                   :outline="true"
                   msg="-"
                   @handle-click="changeQuantity(member, 'sub')"
                 />
                 <BaseParagraph
-                  :msg="getItemQtyForThisMember(member.id, currentSelectedItem.id)?.toString() || '0'"
+                  :msg="getItemQtyForThisMemberInternal(member.id)?.toString() || '0'"
                 />
                 <BaseButton
                   :outline="true"
@@ -738,11 +847,6 @@ const handleUpdateData = async (): Promise<void> => {
                  class="w-full text-lg bg-transparent outline-none border-0"
                  @blur="addNewUser($event)" />
         </div>
-        <BaseParagraph
-          ref="errAssign"
-          :msg="errMsg"
-          class-name="text-red-500 mb-2 mt-3"
-        />
         <div class="flex gap-x-5 my-3 justify-end">
           <BaseButton
             @handle-click="handleAddUserClick"
@@ -751,6 +855,11 @@ const handleUpdateData = async (): Promise<void> => {
             msg="Add user ..."
           />
         </div>
+        <BaseParagraph
+          ref="errAssign"
+          :msg="errMsg"
+          class-name="text-red-500 mb-2 mt-3"
+        />
         <div>
           <BaseParagraph msg="Tips" />
           <BaseParagraph msg="Swipe left to delete" />
