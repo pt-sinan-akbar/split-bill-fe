@@ -47,8 +47,22 @@ const handleSubmit = async (): Promise<void> => {
     if (!isNoChanges()){
       bill.value.bill_owner = await upsertContact()
     }
-    // TODO: one more request to finalize all data (priceOwe member)
+    await finalizeBill()
     internalProgress.value = InternalProgress.SHARE
+  }
+}
+
+const finalizeBill = async (): Promise<void> => {
+  try {
+    const response = await axios.post(`/api/v1/bills/${bill.value.id}/finalize`)
+    if (response.status !== 200) {
+      throw new Error('Failed to finalize bill')
+    }
+    bill.value = response.data as Bill
+  } catch (error) {
+    console.error('Error finalizing bill:', error)
+    errMsg.value = 'Failed to finalize bill, please try again later'
+    throw new Error('Failed to finalize bill')
   }
 }
 

@@ -38,7 +38,8 @@ async function fetchData(id: string) {
     const ocrBill = data.value.raw_image !== null
     const unfinishedBill = data.value.bill_member.every(member => member.price_owe === null)
     maxStep.value = ocrBill ? 4 : 3;
-    currStep.value = unfinishedBill ? (ocrBill ? 2 : 1) : (ocrBill ? 4 : 3);
+    currStep.value = unfinishedBill ? (ocrBill ? 2 : 1) : (ocrBill ? 4 : 3)
+    internalProgress.value = unfinishedBill ? InternalProgress.CREATOR : InternalProgress.SHARE;
   } catch (err) {
     console.error('Error fetching bill:', err)
     error.value = 'Failed to fetch bill data'
