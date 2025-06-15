@@ -62,6 +62,9 @@ const body = computed<Array<Array<string>>>(() => {
   ])
 })
 
+const changedTax = ref<number>(bill.value.bill_data.tax)
+const changedService = ref<number>(bill.value.bill_data.service)
+
 const showAssignModal = ref<boolean>(false)
 const showEditItemModal = ref<boolean>(false)
 const showAddItemModal = ref<boolean>(false)
@@ -98,6 +101,8 @@ const handleDeleteItem = async (): Promise<void> => {
       throw new Error('Failed to update item')
     }
     bill.value = updatedBillResponse.data as Bill
+    changedTax.value = bill.value.bill_data.tax
+    changedService.value = bill.value.bill_data.service
     clearActiveItemBill()
     toogleShowEditItemModal()
   } catch (error) {
@@ -117,6 +122,8 @@ const editItemBill = async (): Promise<void> => {
     })
     if (updatedBillResponse.status === 200) {
       bill.value = updatedBillResponse.data as Bill
+      changedTax.value = bill.value.bill_data.tax
+      changedService.value = bill.value.bill_data.service
       const updatedData = bill.value.bill_item.find(item => item.id === itemId)
       if(updatedData){
         currentSelectedItem.value = { ...updatedData } as BillItem
@@ -288,6 +295,8 @@ const handleAddItem = async (): Promise<void> => {
       throw new Error('Failed to add item')
     }
     bill.value = updatedBillResponse.data as Bill
+    changedTax.value = bill.value.bill_data.tax
+    changedService.value = bill.value.bill_data.service
     toggleShowAddItemModal()
     // clear new item data
     newItem.value = {
@@ -445,6 +454,27 @@ const registerInputRef = (memberId: number | undefined, el: any): void => {
   }
 }
 
+const handleUpdateData = async (): Promise<void> => {
+  if (changedTax.value !== bill.value.bill_data.tax || changedService.value !== bill.value.bill_data.service) {
+    try {
+      const updateDataResponse = await axios.put(`/api/v1/bills/${bill.value.id}/dynamic/data`, {
+        tax: changedTax.value,
+        service: changedService.value
+      })
+      if (updateDataResponse.status === 200) {
+        bill.value = updateDataResponse.data as Bill
+        changedTax.value = bill.value.bill_data.tax
+        changedService.value = bill.value.bill_data.service
+      } else if (updateDataResponse.status !== 202) {
+        throw new Error('Failed to update bill data')
+      }
+    } catch (error) {
+      console.error('Error updating bill data:', error)
+      // TODO: tambahin loading sama error indicator
+    }
+  }
+}
+
 </script>
 
 <template>
@@ -475,13 +505,21 @@ const registerInputRef = (memberId: number | undefined, el: any): void => {
         </div>
         <!--   TODO: Tax and Service auto-change ref value or use separate handler on change    -->
         <!--   TODO TLDR: value disini belum ngubah value di bill            -->
-        <div class="flex justify-between mt-5">
+        <div class="flex justify-between items-center mt-5">
           <BaseParagraph msg="Tax" />
-          <BaseParagraph :contenteditable="true" :msg="bill.bill_data.tax.toString()" />
+          <input type="number"
+                 class="bg-transparent outline-none border-0 focus:outline-none focus:ring-0 text-right px-0"
+                 v-model="changedTax"
+                 @blur="handleUpdateData"
+          />
         </div>
-        <div class="flex justify-between">
+        <div class="flex justify-between items-center">
           <BaseParagraph msg="Service" />
-          <BaseParagraph :contenteditable="true" :msg="bill.bill_data.service.toString()" />
+          <input type="number"
+                 class="bg-transparent outline-none border-0 focus:outline-none focus:ring-0 text-right px-0"
+                 v-model="changedService"
+                 @blur="handleUpdateData"
+          />
         </div>
         <div class="flex justify-between mt-5">
           <BaseParagraph className="font-semibold" msg="Total" />
