@@ -8,20 +8,15 @@ import {
   FwbAccordionPanel,
 } from 'flowbite-vue'
 import InitialAvatar from '@/components/elements/InitialAvatar.vue'
+import { type BillSummaryMember } from '@/types/BillSummary'
 
-const props = defineProps<{
-  member: {
-    name: string
-    priceOwe: number
-    items: {
-      name: string
-      subtotal: number
-      price: number
-      tax: number
-      service: number
-    }[]
-  }
+const { member } = defineProps<{
+  member: BillSummaryMember
 }>()
+
+const getItemQty = (item: { qty: number; name: string }): string => {
+  return item.qty > 0 ? `x${item.qty}` : ''
+}
 </script>
 
 <template>
@@ -34,7 +29,7 @@ const props = defineProps<{
           className="text-lg line-clamp-1 !mr-4"
         />
       </div>
-      <PriceParagraph :price="member.priceOwe" className="text-xl" />
+      <PriceParagraph :price="member.price_owe" className="text-lg" />
     </div>
     <!--  TODO: pake BaseAccordion yang dibuat Lord Dimas  -->
     <fwb-accordion flush :open-first-item="false">
@@ -45,9 +40,12 @@ const props = defineProps<{
       >
         <fwb-accordion-header class="text-lg *:border-0">
           <div class="flex justify-between items-center">
-            <BaseParagraph :msg="item.name" />
+            <div class="flex gap-1 items-center">
+              <BaseParagraph :msg="item.name" />
+              <BaseParagraph :msg="getItemQty(item)" className="text-sm" />
+            </div>
             <PriceParagraph
-              :price="item.subtotal"
+              :price="item.total"
               className="text-sm text-gray-400 pe-2"
             />
           </div>
@@ -70,7 +68,7 @@ const props = defineProps<{
             </div>
             <div class="flex justify-between">
               <BaseParagraph msg="Subtotal" />
-              <PriceParagraph :price="item.subtotal" />
+              <PriceParagraph :price="item.total" />
             </div>
           </div>
         </fwb-accordion-content>
