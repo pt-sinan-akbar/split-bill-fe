@@ -194,24 +194,25 @@ const handleSelectUser = (user: BillMember): void => {
     const memberItem = getMemberItemInternal(user.id)
     if(memberItem && memberItem.deleted_at !== undefined) {
       // if member item exists but deleted, restore it
-      memberItem.deleted_at = undefined
+      memberItem.deleted_at = null
       memberItem.qty = 1
     } else {
       const newMemberItem: BillMemberItem = {
         bill_id: bill.value.id,
         bill_item_id: currentSelectedItem.value.id ?? 0,
         bill_member_id: user.id ?? 0,
-        qty: 1
+        qty: 1,
+        deleted_at: null,
       }
       currentSelectedItem.value.bill_member_item?.push(newMemberItem)
     }
   } else if (currentSelectedItemSplitMode.value === 'equal') {
     const memberItems: BillMemberItem | undefined = getMemberItemInternal(user.id)
     if (memberItems) {
-      if (memberItems.deleted_at === undefined) {
+      if (memberItems.deleted_at === undefined || memberItems.deleted_at === null) {
         memberItems.deleted_at = new Date().toISOString()
       } else {
-        memberItems.deleted_at = undefined
+        memberItems.deleted_at = null
         memberItems.qty = null
       }
     } else {
@@ -219,7 +220,8 @@ const handleSelectUser = (user: BillMember): void => {
         bill_id: bill.value.id,
         bill_item_id: currentSelectedItem.value.id ?? 0,
         bill_member_id: user.id ?? 0,
-        qty: null
+        qty: null,
+        deleted_at: null,
       }
       currentSelectedItem.value.bill_member_item?.push(newMemberItem)
     }
@@ -229,7 +231,7 @@ const handleSelectUser = (user: BillMember): void => {
 const handleSubmitAssignItem = async (): Promise<void> => {
   if (currentSelectedItem.value.bill_member_item) {
     const activeMemberItems = currentSelectedItem.value.bill_member_item.filter(
-      memberItem => memberItem.deleted_at === undefined
+      memberItem => memberItem.deleted_at === undefined || memberItem.deleted_at === null
     )
     if (currentSelectedItemSplitMode.value === 'person'){
       const qtySum = activeMemberItems.reduce((sum, item) => {
@@ -255,6 +257,7 @@ const handleSubmitAssignItem = async (): Promise<void> => {
       }
     }
     try {
+      // TODO: check if no changes, idk how
       if (currentSelectedItem.value.bill_member_item.length > 0) {
         const upsertMemberItemResponse = await axios.post(`/api/v1/bills/${bill.value.id}/dynamic/member-items`, currentSelectedItem.value.bill_member_item)
         if (upsertMemberItemResponse.status !== 200) {
@@ -332,7 +335,7 @@ const isMemberHasThisItemInternal = (member_id: number | undefined): boolean => 
     return false
   }
   const memberItem = getMemberItemInternal(member_id)
-  return !!(memberItem && memberItem.deleted_at === undefined);
+  return !!(memberItem && (memberItem.deleted_at === undefined || memberItem.deleted_at === null));
 }
 
 const getItemQtyForThisMemberInternal = (member_id: number | undefined): number | null => {
@@ -340,7 +343,7 @@ const getItemQtyForThisMemberInternal = (member_id: number | undefined): number 
     return null
   }
   const memberItem = getMemberItemInternal(member_id)
-  if (memberItem && memberItem.deleted_at === undefined) {
+  if (memberItem && (memberItem.deleted_at === undefined || memberItem.deleted_at === null)) {
     return memberItem.qty
   }
   return null
@@ -371,14 +374,14 @@ const handleSplitModeChanges = (mode: 'person' | 'equal'): void => {
   if (mode === 'equal') {
     // set all item member qty to null
     currentSelectedItem.value.bill_member_item?.forEach(memberItem => {
-      if (memberItem.deleted_at === undefined) {
+      if (memberItem.deleted_at === undefined || memberItem.deleted_at === null) {
         memberItem.qty = null
       }
     })
   } else {
     // set all item member qty to 1
     currentSelectedItem.value.bill_member_item?.forEach(memberItem => {
-      if (memberItem.deleted_at === undefined) {
+      if (memberItem.deleted_at === undefined || memberItem.deleted_at === null) {
         memberItem.qty = 1
       }
     })

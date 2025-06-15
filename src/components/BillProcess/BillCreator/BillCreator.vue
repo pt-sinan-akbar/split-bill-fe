@@ -35,13 +35,10 @@ async function fetchData(id: string) {
     loading.value = true
     data.value = await useBill(id)
     error.value = null
-    if (data.value.raw_image) {
-      currStep.value = 2
-      maxStep.value = 4
-    } else {
-      currStep.value = 1
-      maxStep.value = 3
-    }
+    const ocrBill = data.value.raw_image !== null
+    const unfinishedBill = data.value.bill_member.every(member => member.price_owe === null)
+    maxStep.value = ocrBill ? 4 : 3;
+    currStep.value = unfinishedBill ? (ocrBill ? 2 : 1) : (ocrBill ? 4 : 3);
   } catch (err) {
     console.error('Error fetching bill:', err)
     error.value = 'Failed to fetch bill data'

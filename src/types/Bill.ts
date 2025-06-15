@@ -57,7 +57,7 @@ export interface BillMemberItem {
   bill_item_id: number,
   bill_member_id: number,
   qty: number | null,
-  deleted_at?: string,
+  deleted_at: string | undefined | null,
 }
 
 export interface BillOwner {

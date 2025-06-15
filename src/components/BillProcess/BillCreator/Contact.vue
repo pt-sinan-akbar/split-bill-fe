@@ -16,21 +16,49 @@ const billOwner = ref<BillOwner>({
   bank_account: '',
 })
 if (bill.value.bill_owner !== null) {
-  billOwner.value = bill.value.bill_owner
+  billOwner.value = { ...bill.value.bill_owner }
 }
 const internalProgress = inject('internalProgress') as Ref<InternalProgress>
+const errMsg = ref<string | null>(null)
+
+const validateInput = (): boolean => {
+  if (billOwner.value.name === ''){
+    errMsg.value = 'Name is required'
+    return false
+  }
+  errMsg.value = null
+  return true
+}
+
+const isNoChanges = (): boolean => {
+  if (!bill.value.bill_owner) {
+    return false
+  }
+  return (
+    bill.value.bill_owner &&
+    bill.value.bill_owner.name === billOwner.value.name &&
+    bill.value.bill_owner.contact === billOwner.value.contact &&
+    bill.value.bill_owner.bank_account === billOwner.value.bank_account
+  )
+}
 
 const handleSubmit = async (): Promise<void> => {
-  // TODO: validate data input
-  bill.value.bill_owner = await upsertContact()
-  // TODO: one more request to finalize all data (priceOwe member)
-  internalProgress.value = InternalProgress.SHARE
+  if (validateInput()) {
+    if (!isNoChanges()){
+      bill.value.bill_owner = await upsertContact()
+    }
+    // TODO: one more request to finalize all data (priceOwe member)
+    internalProgress.value = InternalProgress.SHARE
+  }
 }
 
 const handleBack = async (): Promise<void> => {
-  // TODO: validate data input
-  bill.value.bill_owner = await upsertContact()
-  internalProgress.value = InternalProgress.CREATOR
+  if (validateInput()) {
+    if (!isNoChanges()){
+      bill.value.bill_owner = await upsertContact()
+    }
+    internalProgress.value = InternalProgress.CREATOR
+  }
 }
 
 const upsertContact = async (): Promise<BillOwner> => {
@@ -39,19 +67,17 @@ const upsertContact = async (): Promise<BillOwner> => {
     contact: billOwner.value.contact,
     bank_account: billOwner.value.bank_account,
   }
-  if (bill.value.bill_owner?.id) {
+  if (bill.value.bill_owner){
     data.id = bill.value.bill_owner.id
   }
   try {
     const response = await axios.post(
       `/api/v1/bills/${bill.value.id}/dynamic/owner`, data
     )
-    if (response.status !== 200) {
-      throw new Error('Error saving contact')
-    }
     return response.data as BillOwner
   } catch (error) {
     console.error('Error saving contact:', error)
+    errMsg.value = 'Failed to save contact, please try again later'
     throw new Error('Failed to save contact')
   }
 }
@@ -87,6 +113,11 @@ const upsertContact = async (): Promise<BillOwner> => {
           type="text"
         />
       </div>
+      <BaseParagraph
+        v-if="errMsg"
+        class="text-red-500"
+        :msg="errMsg"
+      />
     </div>
   </form>
   <div class="w-full flex gap-x-3 mt-auto">
