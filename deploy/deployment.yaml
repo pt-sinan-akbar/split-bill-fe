@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: split-bill-fe
+  labels:
+    app: split-bill-fe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: split-bill-fe
+  template:
+    metadata:
+      name: split-bill-fe
+      labels:
+        app: split-bill-fe
+    spec:
+      containers:
+        - name: split-bill-fe
+          image: dta32/split-bill-fe:rev1 # to change once put into Jenkins CI
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              protocol: TCP
+#      restartPolicy: Always
+      

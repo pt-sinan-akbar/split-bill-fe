@@ -1,5 +1,11 @@
 # split-bill-fe
 
+```
+docker build --build-arg VITE_APP_BASE_URL=https://splitbill.dta32.my.id -t split-bill-fe:<commit-hash> .
+```
+
+---
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
