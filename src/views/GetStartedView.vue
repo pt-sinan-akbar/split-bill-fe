@@ -12,6 +12,7 @@ import router from '@/router'
 import type { Bill } from '@/types/Bill'
 import axios from 'axios'
 import BaseSpinner from '@/components/elements/BaseSpinner.vue'
+import { useHead } from '@unhead/vue'
 
 interface DraftBill {
   id: string
@@ -67,6 +68,17 @@ const createManualBill = async () => {
     createManualLoading.value = false
   }
 }
+
+useHead({
+  title: 'Start',
+  meta: [
+    {
+      property: 'og:title',
+      content: 'Start | Split Bill',
+    },
+  ],
+})
+
 </script>
 
 <template>

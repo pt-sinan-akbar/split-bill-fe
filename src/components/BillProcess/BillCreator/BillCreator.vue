@@ -8,6 +8,7 @@ import Contact from '@/components/BillProcess/BillCreator/Contact.vue'
 import Share from '@/components/BillProcess/BillCreator/Share.vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
+import { useHead } from '@unhead/vue'
 
 const route = useRoute();
 const billId = route.params.id as string;
@@ -65,6 +66,16 @@ watch(internalProgress, (newVal) => {
   } else if (newVal === InternalProgress.SHARE) {
     currStep.value = maxStep.value === 4 ? 4 : 3
   }
+})
+
+useHead({
+  title: 'Bill Creator',
+  meta: [
+    {
+      property: 'og:title',
+      content: 'Bill Creator | Split Bill',
+    },
+  ],
 })
 
 </script>

@@ -6,9 +6,10 @@ import Member from '@/components/share/Member.vue'
 import { computed, ref, watch } from 'vue'
 import type { BillSummary } from '@/types/BillSummary'
 import axios from 'axios'
+import { useHead } from '@unhead/vue'
 
 const route = useRoute()
-const billId = route.params.id as string;
+const billId = route.params.id as string
 
 const loading = ref<boolean>(true)
 const data = ref<BillSummary | null>(null)
@@ -18,7 +19,7 @@ const error = ref<string | null>(null)
 const useBillSummary = async (id: string): Promise<BillSummary> => {
   try {
     const response = await axios.get(`/api/v1/bills/${id}/summary`)
-    if(response.status !== 200){
+    if (response.status !== 200) {
       throw new Error('Error')
     }
     return response.data as BillSummary
@@ -40,10 +41,11 @@ async function fetchData(id: string) {
     loading.value = false
   }
 }
+
 watch(() => billId, fetchData, { immediate: true })
 
 const displayContact = computed<string>(() => {
-  if (data.value){
+  if (data.value) {
     if (data.value.name !== '' && data.value.contact.name !== '') {
       return `${data.value.contact.name} - ${data.value.contact.contact}`
     }
@@ -53,6 +55,33 @@ const displayContact = computed<string>(() => {
   }
 })
 
+useHead({
+  title: () => (data.value ? `${data.value.name}` : 'Share'),
+  meta: [
+    {
+      property: 'description',
+      content: () =>
+        data.value
+          ? `Hey! Check out this ${data.value.name} split bill`
+          : 'Hey! Check out this split bill',
+    },
+    {
+      property: 'og:title',
+      content: () => (data.value ? `${data.value.name} | Split Bill` : 'Share | Split Bill'),
+    },
+    {
+      property: 'og:description',
+      content: () =>
+        data.value
+          ? `Hey! Check out this ${data.value.name} split bill`
+          : 'Hey! Check out this split bill',
+    },
+    {
+      property: 'og:url',
+      content: () => `https://splitbill.dta32.my.id/s/${billId}`,
+    },
+  ],
+})
 </script>
 
 <template>
@@ -93,11 +122,11 @@ const displayContact = computed<string>(() => {
         <div class="flex flex-col gap-3">
           <BaseParagraph msg="Pay to" className="text-2xl" />
           <div class="flex flex-col *:text-gray-500">
+            <BaseParagraph :msg="displayContact" className="text-xl" />
             <BaseParagraph
-              :msg="displayContact"
+              :msg="data.contact.bank_account"
               className="text-xl"
             />
-            <BaseParagraph :msg="data.contact.bank_account" className="text-xl" />
           </div>
         </div>
       </div>
