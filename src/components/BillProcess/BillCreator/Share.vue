@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, type Ref, ref } from 'vue'
+import { computed, inject, type Ref } from 'vue'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import BaseParagraph from '@/components/elements/Typography/BaseParagraph.vue'
 import BaseTitle from '@/components/elements/Typography/BaseTitle.vue'
@@ -9,7 +9,10 @@ import type { Bill } from '@/types/Bill'
 
 const bill = inject('bill') as Ref<Bill>
 
-const urlMsg = ref<string>('https://splitbill.dta32.my.id/s/' + bill.value.id)
+const urlMsg = computed<string>((): string => {
+  if (!bill.value.id) return ''
+  return `${window.location.origin}/s/${bill.value.id}`
+})
 
 const copyUrl = (): void => {
   if (!urlMsg.value) return

@@ -39,7 +39,7 @@ const getItemQty = (item: { qty: number; name: string }): string => {
         :title="item.name"
       >
         <fwb-accordion-header class="text-lg *:border-0">
-          <div class="flex justify-between items-center">
+          <div class="flex w-full justify-between items-center">
             <div class="flex gap-1 items-center">
               <BaseParagraph :msg="item.name" />
               <BaseParagraph :msg="getItemQty(item)" className="text-sm" />
