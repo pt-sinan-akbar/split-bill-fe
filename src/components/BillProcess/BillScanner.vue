@@ -5,6 +5,8 @@ import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import CropperContainer from '../Croppper/Index.vue'
 import BaseModal from '../elements/Modal/BaseModal.vue'
+import BaseSpinner from '../elements/BaseSpinner.vue'
+import axios from 'axios'
 import router from '@/router'
 
 const video = ref<HTMLVideoElement | null>(null)
@@ -16,6 +18,7 @@ const isShowModal = ref<boolean>(false)
 const imgToCrop = ref<string | null>(null)
 const cropperRef = ref<InstanceType<typeof CropperContainer> | null>(null)
 const imgClass = ref<string>('w-full h-full object-cover border-0 ')
+const isLoading = ref<boolean>(false)
 
 const currStep = inject('currStep') as Ref<number>
 const maxStep = inject('maxStep') as Ref<number>
@@ -103,10 +106,36 @@ const handleCrop = async (): Promise<void> => {
   }
 }
 
+const extractBillData = async () => {
+  if (!img.value || !img.value.src) return
+
+  isLoading.value = true
+  try {
+    const res = await fetch(img.value.src)
+    const blob = await res.blob()
+
+    const formData = new FormData()
+    formData.append('name', 'test-user')
+    formData.append('image', blob, 'scanned_bill.png')
+
+    const response = await axios.post('/api/v1/bills/extract-bill-data', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    alert('Extraction Successful! Check console for data.')
+  } catch (error) {
+    console.error('Backend Extraction Error:', error)
+    alert('Failed to extract data. Please try again.')
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const uploadBill = () => {
-  console.log('upload bill')
-  // POST request here
-  router.push({ name: 'bill-creator-id', params: { id: 'mock-scanned-bill' } })
+  extractBillData()
+  // TODO: implement next step here ...
 }
 </script>
 
@@ -118,6 +147,12 @@ const uploadBill = () => {
       <BaseTitle tag="h5" msg="Scan your bill" />
       <BaseParagraph msg="it will split to everyone" />
     </div>
+    
+      <div v-if="isLoading" class="fixed inset-0 z-[100] h-screen w-screen bg-white/80 flex flex-col items-center justify-center">
+        <BaseSpinner />
+        <BaseParagraph msg="Extracting data with AI..." class="mt-4 animate-pulse !h-auto" />
+      </div>
+
     <video
       ref="video"
       autoplay
@@ -164,8 +199,9 @@ const uploadBill = () => {
         />
         <BaseParagraph msg="or" />
         <BaseButton
-          msg="Continue"
+          :msg="isLoading ? 'Processing...' : 'Continue'"
           type="button"
+          :disabled="isLoading"
           @handleClick="uploadBill"
         />
       </div>
