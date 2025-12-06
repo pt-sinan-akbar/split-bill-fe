@@ -115,7 +115,8 @@ const extractBillData = async () => {
     const blob = await res.blob()
 
     const formData = new FormData()
-    formData.append('name', 'test-user')
+    // TODO: Set this as bill_owner name, waiting for DTA32 approval first
+    formData.append('name', 'test-user') 
     formData.append('image', blob, 'scanned_bill.png')
 
     const response = await axios.post('/api/v1/bills/extract-bill-data', formData, {
