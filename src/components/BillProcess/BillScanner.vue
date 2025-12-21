@@ -7,7 +7,9 @@ import CropperContainer from '../Croppper/Index.vue'
 import BaseModal from '../elements/Modal/BaseModal.vue'
 import BaseSpinner from '../elements/BaseSpinner.vue'
 import axios from 'axios'
-import router from '@/router'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const video = ref<HTMLVideoElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -27,7 +29,7 @@ const maxStep = inject('maxStep') as Ref<number>
 currStep.value = 1
 maxStep.value = 4
 
-const constraints = ref<Object>({
+const constraints = ref<object>({
   audio: false,
   video: {
     facingMode: { ideal: 'environment' }, // 'environment' means back camera
@@ -131,13 +133,22 @@ const extractBillData = async () => {
     formData.append('image', blob, uniqueFileName)
     formData.append('name', userName)
 
-    await axios.post('/api/v1/bills/extract-bill-data', formData, {
+    const response =await axios.post('/api/v1/bills/extract-bill-data', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
 
-    alert('Extraction Successful! Check console for data.')
+    const billId = response.data?.id 
+
+    if (billId) {
+      await router.push({ 
+        name: 'bill-creator-id', 
+        params: { id: billId } 
+      })
+    } else {
+      alert('Failed to extract data. Please try again.')
+    }
   } catch (error) {
     console.error('Backend Extraction Error:', error)
     alert('Failed to extract data. Please try again.')
@@ -148,7 +159,6 @@ const extractBillData = async () => {
 
 const uploadBill = () => {
   extractBillData()
-  // router.push({ name: 'bill-creator-id', params: { id: 'mock-scanned-bill' } })
 }
 </script>
 
