@@ -19,6 +19,8 @@ const imgToCrop = ref<string | null>(null)
 const cropperRef = ref<InstanceType<typeof CropperContainer> | null>(null)
 const imgClass = ref<string>('w-full h-full object-cover border-0 ')
 const isLoading = ref<boolean>(false)
+const originalFileName = ref<string>('bill_image.png')
+
 
 const currStep = inject('currStep') as Ref<number>
 const maxStep = inject('maxStep') as Ref<number>
@@ -81,6 +83,7 @@ const handleCapture = () => {
   const data = canvas.value.toDataURL('image/png')
   hasCaptured.value = true
   img.value.src = data
+  originalFileName.value = 'bill_image.png'
 }
 
 const handleImgChange = (e: Event) => {
@@ -90,6 +93,7 @@ const handleImgChange = (e: Event) => {
   if (files && files.length > 0) {
     const file = files[0]
     imgToCrop.value = URL.createObjectURL(file)
+    originalFileName.value = file.name
   }
 }
 
@@ -115,11 +119,19 @@ const extractBillData = async () => {
     const blob = await res.blob()
 
     const formData = new FormData()
-    // TODO: Set this as bill_owner name, waiting for DTA32 approval first
-    formData.append('name', 'test-user') 
-    formData.append('image', blob, 'scanned_bill.png')
 
-    const response = await axios.post('/api/v1/bills/extract-bill-data', formData, {
+    // Construct unique file name 
+    const fileExtension = originalFileName.value.split('.').pop() || 'png'
+    const uuid = crypto.randomUUID()
+    const uniqueFileName = `${uuid}.${fileExtension}`
+
+    // Get user name from auth (later ...)
+    const userName = "Guest";
+
+    formData.append('image', blob, uniqueFileName)
+    formData.append('name', userName)
+
+    await axios.post('/api/v1/bills/extract-bill-data', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -136,7 +148,7 @@ const extractBillData = async () => {
 
 const uploadBill = () => {
   extractBillData()
-  // TODO: implement next step here ...
+  // router.push({ name: 'bill-creator-id', params: { id: 'mock-scanned-bill' } })
 }
 </script>
 
