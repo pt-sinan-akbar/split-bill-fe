@@ -7,9 +7,7 @@ import CropperContainer from '../Croppper/Index.vue'
 import BaseModal from '../elements/Modal/BaseModal.vue'
 import BaseSpinner from '../elements/BaseSpinner.vue'
 import axios from 'axios'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
+import router from '@/router'
 
 const video = ref<HTMLVideoElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
