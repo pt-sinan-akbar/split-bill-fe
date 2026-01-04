@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import router from '@/router'
 import { computed, inject, type Ref } from 'vue'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import BaseParagraph from '@/components/elements/Typography/BaseParagraph.vue'
@@ -10,8 +11,9 @@ import type { Bill } from '@/types/Bill'
 const bill = inject('bill') as Ref<Bill>
 
 const urlMsg = computed<string>((): string => {
-  if (!bill.value.id) return ''
-  return `${window.location.origin}/s/${bill.value.id}`
+  const id = router.currentRoute.value.params.id
+  if (!id) return ''
+  return `${window.location.origin}/s/${id}`
 })
 
 const copyUrl = (): void => {
