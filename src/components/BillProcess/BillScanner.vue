@@ -5,6 +5,8 @@ import BaseParagraph from '../elements/Typography/BaseParagraph.vue'
 import BaseTitle from '../elements/Typography/BaseTitle.vue'
 import CropperContainer from '../Croppper/Index.vue'
 import BaseModal from '../elements/Modal/BaseModal.vue'
+import BaseSpinner from '../elements/BaseSpinner.vue'
+import axios from 'axios'
 import router from '@/router'
 
 const video = ref<HTMLVideoElement | null>(null)
@@ -16,13 +18,16 @@ const isShowModal = ref<boolean>(false)
 const imgToCrop = ref<string | null>(null)
 const cropperRef = ref<InstanceType<typeof CropperContainer> | null>(null)
 const imgClass = ref<string>('w-full h-full object-cover border-0 ')
+const isLoading = ref<boolean>(false)
+const originalFileName = ref<string>('bill_image.png')
+
 
 const currStep = inject('currStep') as Ref<number>
 const maxStep = inject('maxStep') as Ref<number>
 currStep.value = 1
 maxStep.value = 4
 
-const constraints = ref<Object>({
+const constraints = ref<object>({
   audio: false,
   video: {
     facingMode: { ideal: 'environment' }, // 'environment' means back camera
@@ -78,6 +83,7 @@ const handleCapture = () => {
   const data = canvas.value.toDataURL('image/png')
   hasCaptured.value = true
   img.value.src = data
+  originalFileName.value = 'bill_image.png'
 }
 
 const handleImgChange = (e: Event) => {
@@ -87,6 +93,7 @@ const handleImgChange = (e: Event) => {
   if (files && files.length > 0) {
     const file = files[0]
     imgToCrop.value = URL.createObjectURL(file)
+    originalFileName.value = file.name
   }
 }
 
@@ -103,10 +110,53 @@ const handleCrop = async (): Promise<void> => {
   }
 }
 
+const extractBillData = async () => {
+  if (!img.value || !img.value.src) return
+
+  isLoading.value = true
+  try {
+    const res = await fetch(img.value.src)
+    const blob = await res.blob()
+
+    const formData = new FormData()
+
+    // Construct unique file name 
+    const fileExtension = originalFileName.value.split('.').pop() || 'png'
+    const uuid = crypto.randomUUID()
+    const uniqueFileName = `${uuid}.${fileExtension}`
+
+    // Get user name from auth (later ...)
+    const userName = "Guest";
+
+    formData.append('image', blob, uniqueFileName)
+    formData.append('name', userName)
+
+    const response =await axios.post('/api/v1/bills/extract-bill-data', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    const billId = response.data?.id 
+
+    if (billId) {
+      await router.push({ 
+        name: 'bill-creator-id', 
+        params: { id: billId } 
+      })
+    } else {
+      alert('Failed to extract data. Please try again.')
+    }
+  } catch (error) {
+    console.error('Backend Extraction Error:', error)
+    alert('Failed to extract data. Please try again.')
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const uploadBill = () => {
-  console.log('upload bill')
-  // POST request here
-  router.push({ name: 'bill-creator-id', params: { id: 'mock-scanned-bill' } })
+  extractBillData()
 }
 </script>
 
@@ -118,6 +168,12 @@ const uploadBill = () => {
       <BaseTitle tag="h5" msg="Scan your bill" />
       <BaseParagraph msg="it will split to everyone" />
     </div>
+    
+      <div v-if="isLoading" class="fixed inset-0 z-[100] h-screen w-screen bg-white/80 flex flex-col items-center justify-center">
+        <BaseSpinner />
+        <BaseParagraph msg="Extracting data with AI..." class="mt-4 animate-pulse !h-auto" />
+      </div>
+
     <video
       ref="video"
       autoplay
@@ -164,8 +220,9 @@ const uploadBill = () => {
         />
         <BaseParagraph msg="or" />
         <BaseButton
-          msg="Continue"
+          :msg="isLoading ? 'Processing...' : 'Continue'"
           type="button"
+          :disabled="isLoading"
           @handleClick="uploadBill"
         />
       </div>
