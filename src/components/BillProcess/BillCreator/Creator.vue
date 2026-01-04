@@ -134,6 +134,9 @@ const editItemBill = async (): Promise<void> => {
       const updatedData = bill.value.bill_item.find(item => item.id === itemId)
       if(updatedData){
         currentSelectedItem.value = { ...updatedData } as BillItem
+        currentSelectedItem.value.bill_member_item = bill.value.bill_member_item.filter(
+            memberItem => memberItem.bill_item_id === itemId
+        )
       }
     } else if (updatedBillResponse.status !== 202) {
       throw new Error('Failed to update item')
